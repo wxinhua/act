@@ -1,0 +1,41 @@
+# misc
+seed: 1
+device: cuda
+
+eval: false
+onscreen_render: false
+
+agent_class: DroidDiffusion
+
+robot_infor:
+    # camera_sensors: ['rgb_images','depth_images']
+    camera_sensors: ['rgb_images']
+    camera_names : ['camera_top']
+
+    arms : ['puppet']
+    controls : ['joint_position', 'end_effector']
+                # 'joint_velocity_left', 'joint_velocity_right', 'joint_effort_left', 'joint_effort_right'
+    use_robot_base: False
+# DroidDiffusion set
+agent_config:
+    backbone: resnet18
+    action_dim: 7
+    state_dim: 7
+
+    lr_backbone: 0.00001
+
+    lr: 0.0001
+
+    # for DroidDiffusion
+    observation_horizon: 1
+    prediction_horizon: 16
+    num_queries: 16
+    num_inference_timesteps: 10
+    ema_power: 0.75
+    weight_decay: 0.0
+    pool_class: SpatialSoftmax
+    stsm_num_kp: 512
+    img_fea_dim: 512
+    cond_obs_dim: 512
+    num_noise_samples: 8
+    use_color_rand: False

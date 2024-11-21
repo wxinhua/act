@@ -1,0 +1,37 @@
+# misc
+seed: 1
+device: cuda
+
+eval: false
+onscreen_render: false
+
+agent_class: ACT
+
+robot_infor:
+    camera_sensors: [ 'rgb_images', 'depth_images' ]
+    camera_names : ['camera_front', 'camera_left_wrist', 'camera_right_wrist']
+
+    arms : ['master', 'puppet']
+    controls : ['joint_position_left', 'joint_position_right', 'end_effector_left', 'end_effector_right']
+                # 'joint_velocity_left', 'joint_velocity_right', 'joint_effort_left', 'joint_effort_right'
+    use_robot_base: True
+# ACT set
+agent_config:
+    enc_layers: 4
+    dec_layers: 7
+    nheads: 8
+    hidden_dim: 512
+    dim_feedforward: 3200
+    backbone: resnet18
+    action_dim: 16
+    no_encoder: False
+
+    lr_backbone: 0.00001
+
+    lr: 0.0001
+    kl_weight: 10
+
+    # others
+    vq: null
+    vq_class: null
+    vq_dim: null
