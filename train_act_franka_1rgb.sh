@@ -5,8 +5,13 @@
 # exp type: franka_3rgb, franka_1rgb, ur_1rgb, songling_3rgb, tiangong_1rgb, sim
 
 # export TRANSFORMERS_CACHE=/nfsroot/DATA/IL_Research/wk/huggingface_model
-export HF_HOME=/nfsroot/DATA/IL_Research/wk/huggingface_model
-export TORCH_HOME=/nfsroot/DATA/IL_Research/wk/torch_model
+# export HF_HOME=/nfsroot/DATA/IL_Research/wk/huggingface_model
+# export TORCH_HOME=/nfsroot/DATA/IL_Research/wk/torch_model
+
+#### baidu
+export HF_HOME=/media/users/wk/huggingface_model
+export TORCH_HOME=/media/users/wk/torch_model
+
 
 # CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
 #         --task_name multi_task_2 \
@@ -25,7 +30,7 @@ export TORCH_HOME=/nfsroot/DATA/IL_Research/wk/torch_model
 #         --wandb_name ACT_franka_1rgb_camlrt_multi_task_2_lr1e5_batch24_chunk50 \
 
 
-CUDA_VISIBLE_DEVICES=0,1 python3 train_algo.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_algo.py \
         --task_name multi_task_2 \
         --camera_names camera_top \
         --ckpt_dir ./ckpt_dir/ACT_camt/241112/table/franka_1rgb_multi_task_2_lr1e5_batch24_chunk50 \

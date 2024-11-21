@@ -8,6 +8,10 @@
 # export HF_HOME=/nfsroot/DATA/IL_Research/wk/huggingface_model
 # export TORCH_HOME=/nfsroot/DATA/IL_Research/wk/torch_model
 
+#### baidu
+export HF_HOME=/media/users/wk/huggingface_model
+export TORCH_HOME=/media/users/wk/torch_model
+
 # CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
 #         --task_name multi_task_2 \
 #         --camera_names camera_left camera_right camera_top \
@@ -24,7 +28,7 @@
 #         --use_wandb \
 #         --wandb_name ACT_franka_3rgb_camlrt_multi_task_2_lr1e5_batch24_chunk50 \
 
-CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_algo.py \
         --task_name multi_task_2 \
         --camera_names camera_left camera_right camera_top \
         --ckpt_dir ./ckpt_dir/ACT_camlrt/241112/table/multi_task_2_lr1e5_batch24_chunk50 \

@@ -389,8 +389,8 @@ class VLAIL:
             # print(f'Training finished:\nSeed {self.seed}, val loss {min_val_loss:.6f} at step {best_step}')
             self.logger.info(f'Training finished:\nSeed {self.seed}, val loss {min_val_loss:.6f} at step {best_step}')
         
-        # save training curves
-        plot_history(train_history, validation_history, self.args['num_steps'], ckpt_dir, self.seed)
+            # save training curves
+            plot_history(train_history, validation_history, self.args['num_steps'], ckpt_dir, self.seed)
         
         ## test ckpt
         if rank == 0:

@@ -427,8 +427,9 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
     for dataset_dir in dataset_dir_l:
         # hdf5_files_list = find_all_hdf5(dataset_dir) 
         # obtain train test split
-        train_dir = os.path.join(dataset_dir, 'train')
-        val_dir = os.path.join(dataset_dir, 'val')
+        succ_dataset_dir = os.path.join(dataset_dir, 'success_episodes')
+        train_dir = os.path.join(succ_dataset_dir, 'train')
+        val_dir = os.path.join(succ_dataset_dir, 'val')
         hdf5_train_files_list = get_files(train_dir, robot_infor)
         hdf5_val_files_list = get_files(val_dir, robot_infor)
         train_dataset_path_list_list.append(hdf5_train_files_list)
@@ -564,7 +565,7 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
         num_replicas = torch.cuda.device_count()
         # val_num_workers = 8 if train_dataset.augment_images else 2
         train_num_workers = 8 #0 #4 #0 #for local #8 #0 #2
-        val_num_workers = 8 #0 #4 #0 #for local#8 #0 #2
+        val_num_workers = 1 #0 #4 #0 #for local#8 #0 #2
 
         if rank == 0 or rank is None:
             logger.info(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
