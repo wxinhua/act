@@ -10,9 +10,9 @@ agent_class: ACT
 robot_infor:
     # camera_sensors: ['rgb_images','depth_images']
     camera_sensors: ['rgb_images']
-    camera_names : ['camera_left_external', 'camera_right_external', 'camera_front_external']
+    camera_names : ['camera_left_external', 'camera_right_external', 'camera_front_external', 'camera_handeye']
 
-    arms : ['puppet']
+    arms : ['franka']
     controls : ['joint_position', 'end_effector']
                 # 'joint_velocity_left', 'joint_velocity_right', 'joint_effort_left', 'joint_effort_right'
     use_robot_base: False

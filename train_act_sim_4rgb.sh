@@ -29,7 +29,7 @@ export TORCH_HOME=/media/users/wk/torch_model
 #         --wandb_name ACT_simulation_4rgb_camlrt_multi_task_2_lr1e5_batch24_chunk50 \
 
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_algo.py \
+CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --task_name multi_task_2 \
         --camera_names camera_left_external camera_right_external camera_front_external \
         --ckpt_dir ./ckpt_dir/ACT_camlrt/241112/table/simulation_4rgb_multi_task_2_lr1e5_batch24_chunk50 \

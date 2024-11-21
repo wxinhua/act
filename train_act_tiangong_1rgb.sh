@@ -29,21 +29,40 @@ export TORCH_HOME=/media/users/wk/torch_model
 #         --wandb_name ACT_tiangong_1rgb_camlrt_multi_task_2_lr1e5_batch24_chunk50 \
 
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_algo.py \
-        --task_name multi_task_2 \
+# CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
+#         --task_name multi_task_2 \
+#         --camera_names camera_top \
+#         --ckpt_dir ./ckpt_dir/ACT_camt/241112/table/tiangong_1rgb_multi_task_2_lr1e5_batch24_chunk50 \
+#         --exp_type tiangong_1rgb \
+#         --agent_class ACT \
+#         --batch_size_train 24 --batch_size_val 24 \
+#         --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
+#         --lr 5e-5 --kl_weight 10 --use_lang \
+#         --backbone 'resnet18' \
+#         --act_norm_class norm2 \
+#         --lr_scheduler CosineLR \
+#         --num_steps 20 --eval_every 21 --validate_every 10 --save_every 10 \
+#         --use_wandb \
+#         --wandb_name ACT_tiangong_1rgb_camlrt_multi_task_2_lr1e5_batch24_chunk50 \
+
+############ for benchmark!
+# --num_steps 100000 --eval_every 100001 --validate_every 500 --save_every 50000 \
+
+CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
+        --task_name place_button \
         --camera_names camera_top \
-        --ckpt_dir ./ckpt_dir/ACT_camt/241112/table/tiangong_1rgb_multi_task_2_lr1e5_batch24_chunk50 \
+        --ckpt_dir ./ckpt_dir/ACT_camt/241121/table/tiangong_1rgb_place_button_lr1e5_batch24_chunk50 \
         --exp_type tiangong_1rgb \
         --agent_class ACT \
-        --batch_size_train 24 --batch_size_val 24 \
+        --batch_size_train 48 --batch_size_val 48 \
         --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
-        --lr 5e-5 --kl_weight 10 --use_lang \
+        --lr 1e-4 --kl_weight 10 \
         --backbone 'resnet18' \
         --act_norm_class norm2 \
         --lr_scheduler CosineLR \
-        --num_steps 20 --eval_every 21 --validate_every 10 --save_every 10 \
+        --num_steps 100000 --eval_every 100001 --validate_every 500 --save_every 50000 \
         --use_wandb \
-        --wandb_name ACT_tiangong_1rgb_camlrt_multi_task_2_lr1e5_batch24_chunk50 \
+        --wandb_name ACT_tiangong_1rgb_camlrt_place_button_lr1e5_batch24_chunk50 \
 
 
 

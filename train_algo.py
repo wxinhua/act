@@ -166,24 +166,46 @@ class VLAIL:
 
     def execute(self, task_name):
         # exp type: franka_3rgb, franka_1rgb, ur_1rgb, songling_3rgb, tiangong_1rgb, sim
-        if self.args['exp_type'] == 'franka_3rgb':
-            from cfgs.constants_config import Franka_3rgb_TASK_CONFIGS as TASK_CONFIGS
-        elif self.args['exp_type'] == 'franka_1rgb':
-            from cfgs.constants_config import Franka_1rgb_TASK_CONFIGS as TASK_CONFIGS
-        elif self.args['exp_type'] == 'ur_1rgb':
-            from cfgs.constants_config import UR_1rgb_TASK_CONFIGS as TASK_CONFIGS
-        elif self.args['exp_type'] == 'songling_3rgb':
-            from cfgs.constants_config import Songling_3rgb_TASK_CONFIGS as TASK_CONFIGS
-        elif self.args['exp_type'] == 'tiangong_1rgb':
-            from cfgs.constants_config import Tiangong_1rgb_TASK_CONFIGS as TASK_CONFIGS
-        task_config = TASK_CONFIGS[task_name]
-        dataset_dir = task_config['dataset_dir']
-        sample_weights = task_config.get('sample_weights', None)
+        # if self.args['exp_type'] == 'franka_3rgb':
+        #     from cfgs.constants_config import Franka_3rgb_TASK_CONFIGS as TASK_CONFIGS
+        # elif self.args['exp_type'] == 'franka_1rgb':
+        #     from cfgs.constants_config import Franka_1rgb_TASK_CONFIGS as TASK_CONFIGS
+        # elif self.args['exp_type'] == 'ur_1rgb':
+        #     from cfgs.constants_config import UR_1rgb_TASK_CONFIGS as TASK_CONFIGS
+        # elif self.args['exp_type'] == 'songling_3rgb':
+        #     from cfgs.constants_config import Songling_3rgb_TASK_CONFIGS as TASK_CONFIGS
+        # elif self.args['exp_type'] == 'tiangong_1rgb':
+        #     from cfgs.constants_config import Tiangong_1rgb_TASK_CONFIGS as TASK_CONFIGS
+        # task_config = TASK_CONFIGS[task_name]
+
+        # dataset_dir = task_config['dataset_dir']
+
+        # sample_weights = task_config.get('sample_weights', None)
         # train_ratio > 1: random train_ratio num of traj
         # train_ratio -> [0, 1]: ratio of traj
         # train_ratio = task_config.get('train_ratio', [0.95])
-        name_filter = task_config.get('name_filter', lambda n: True)
+        # name_filter = task_config.get('name_filter', lambda n: True)
 
+        Franka_1rgb_DATA_DIR = '/media/data/h5_franka_1rgb'
+        Franka_3rgb_DATA_DIR = '/media/data/h5_franka_3rgb'
+        Songling_3rgb_DATA_DIR = '/media/data/h5_songling_3rgb'
+        Tiangong_1rgb_DATA_DIR = '/media/data/h5_tiangong_1rgb'
+        UR_1rgb_DATA_DIR = '/media/data/h5_ur_1rgb'
+
+        if self.args['exp_type'] == 'franka_3rgb':
+            robot_data_dir = Franka_3rgb_DATA_DIR
+        elif self.args['exp_type'] == 'franka_1rgb':
+            robot_data_dir = Franka_1rgb_DATA_DIR
+        elif self.args['exp_type'] == 'ur_1rgb':
+            robot_data_dir = UR_1rgb_DATA_DIR
+        elif self.args['exp_type'] == 'songling_3rgb':
+            robot_data_dir = Songling_3rgb_DATA_DIR
+        elif self.args['exp_type'] == 'tiangong_1rgb':
+            robot_data_dir = Tiangong_1rgb_DATA_DIR
+
+        dataset_dir = os.path.join(robot_data_dir, self.args['task_name'])
+        sample_weights = None
+        name_filter = lambda n: True
         # print(f'dataset_dir: {dataset_dir}')
         # print(f'train_ratio: {train_ratio}')
         # print(f'sample_weights: {sample_weights}')
