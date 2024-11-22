@@ -48,7 +48,7 @@ export TORCH_HOME=/media/users/wk/torch_model
 # --num_steps 100000 --eval_every 100001 --validate_every 500 --save_every 50000 \
 CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --task_name place_in_bread_on_plate_1 \
-        --camera_names camera_left camera_right \
+        --camera_names camera_left camera_right camera_top \
         --ckpt_dir ./ckpt_dir/ACT_camlrt/241121/table/place_in_bread_on_plate_1_lr1e5_batch24_chunk50 \
         --exp_type franka_3rgb \
         --agent_class ACT \
@@ -58,6 +58,6 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --backbone 'resnet18' \
         --act_norm_class norm2 \
         --lr_scheduler CosineLR \
-        --num_steps 100000 --eval_every 100001 --validate_every 500 --save_every 50000 \
+        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
         --wandb_name ACT_camlrt_place_in_bread_on_plate_1_lr1e5_batch24_chunk50 \
