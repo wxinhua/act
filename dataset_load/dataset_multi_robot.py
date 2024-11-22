@@ -17,7 +17,15 @@ import copy
 import torchvision.transforms as transforms
 import cv2
 from PIL import Image
+import psutil
+import os
 from torch.utils.data import Sampler, DistributedSampler
+
+def print_memory_info(process, idx):
+    used_bytes = process.memory_info().rss
+    used_MB = used_bytes / (1024*1024)
+    print(f"{idx}. used_MB: {used_MB}")
+
 
 class EpisodicDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_path_list, robot_infor, norm_stats, episode_ids, episode_len, chunk_size, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, use_depth_image=False, exp_type='franka_3rgb'):
@@ -49,15 +57,16 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         self.read_h5files = ReadH5Files(self.robot_infor)
 
-        self.path2string_dict = dict()
-        for dataset_path in self.dataset_path_list:
-            with h5py.File(dataset_path, 'r') as root:
-                if 'language_raw' in root.keys():
-                    lang_raw_utf = root['language_raw'][0].decode('utf-8')
-                else:
-                    lang_raw_utf = 'None'
-                self.path2string_dict[dataset_path] = lang_raw_utf
-            root.close()
+        # todo
+        # self.path2string_dict = dict()
+        # for dataset_path in self.dataset_path_list:
+        #     with h5py.File(dataset_path, 'r') as root:
+        #         if 'language_raw' in root.keys():
+        #             lang_raw_utf = root['language_raw'][0].decode('utf-8')
+        #         else:
+        #             lang_raw_utf = 'None'
+        #         self.path2string_dict[dataset_path] = lang_raw_utf
+        #     root.close()
         
         print(f"len episode_ids: {len(self.episode_ids)}")
         print(f"first 10 episode_ids: {self.episode_ids[:10]}")
@@ -96,6 +105,15 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         self.tmp_cnt = 0
 
+        ####
+        # self.read_cnt = 0
+        # self.image_dict = None
+        # self.control_dict = None
+        # self.base_dict = None
+        # self.exe = None 
+        # self.is_compress = None
+        # self.start_ts = None
+
         self.__getitem__(0) # initialize self.is_sim and self.transformations
     
     def __len__(self):
@@ -117,124 +135,85 @@ class EpisodicDataset(torch.utils.data.Dataset):
         episode_id, start_ts = self._locate_transition(index)
 
         dataset_path = self.dataset_path_list[episode_id]
-        image_dict, control_dict, base_dict, _, is_compress = self.read_h5files.execute(dataset_path, camera_frame=start_ts, use_depth_image=self.use_depth_image)
-        if self.use_raw_lang:
-            lang_raw = self.path2string_dict[dataset_path]
+        
+        print(f"=============")
+        process = psutil.Process(os.getpid())
+        print_memory_info(process, 1)
+        
+        ### todo
 
-        if isinstance(self.ctl_elem_key, list):
-            qpos_list = []
-            action_list = []
-            for ele in self.ctl_elem_key:
-                cur_qpos = control_dict[self.qpos_arm_key][ele][:]
-                cur_action = control_dict[self.action_arm_key][ele][:]
-                qpos_list.append(cur_qpos)
-                action_list.append(cur_action)
-            qpos = np.concatenate(qpos_list, axis=-1)
-            action = np.concatenate(action_list, axis=-1)
-        else:
-            qpos = control_dict[self.qpos_arm_key][self.ctl_elem_key][:]
-            action = control_dict[self.action_arm_key][self.ctl_elem_key][:]
+        with h5py.File(dataset_path, 'r') as root:
+            lang_embed = None
+            if 'language_distilbert' in root:
+                lang_embed = root['language_distilbert'][:]
+                lang_embed = torch.from_numpy(lang_embed).float().squeeze()
+            else:
+                lang_embed = torch.zeros(1)
+            
+            action = root['puppet']['joint_position'][:]
 
-        # puppet_joint_position = control_dict['puppet']['joint_position'][()]
-        # action = puppet_joint_position
-        # print(f"=============")
-        # print(f"0.0 action shape: {action.shape}")
+            original_action_shape = action.shape
+            episode_len = original_action_shape[0]
 
-        original_action_shape = action.shape
-        # print(f"0. original_action_shape: {original_action_shape}")
-        episode_len = original_action_shape[0]
-        # get observation at start_ts only
-        # qpos = action[start_ts]
-        qpos = qpos[start_ts]
+            qpos = root['puppet']['joint_position'][start_ts]
 
-        # if is_sim:
-        #     action = action[start_ts:]
-        #     action_len = episode_len - start_ts
-        # else:
+            image_dict = dict()
+            for cam_name in self.robot_infor['camera_names']:
+                image_dict[cam_name] = root['observations']['rgb_images'][cam_name][start_ts]
+                # decompressed_image = cv2.imdecode(image_dict[cam_name], cv2.IMREAD_COLOR)
+                # image_dict[cam_name] = np.array(decompressed_image)
 
-        # for real-world exp
-        action = action[max(0, start_ts - 1):]  # hack, to make timesteps more aligned
-        action_len = episode_len - max(0, start_ts - 1)  # hack, to make timesteps more aligned
-        # print(f"0. action size: {action.shape}")
+                image_dict[cam_name] = np.array(cv2.imdecode(image_dict[cam_name], cv2.IMREAD_COLOR))
+
+                # shape = (640, 480, 3)
+                # image_dict[cam_name] = torch.zeros(shape)
+
+                # if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
+                #     image_dict[cam_name] = image_dict[cam_name][:, :, ::-1]
+
+            action = action[max(0, start_ts - 1):]
+            action_len = episode_len - max(0, start_ts - 1) 
+
+        root.close()
+
+        print_memory_info(process, 2)
 
         if original_action_shape[0] < self.chunk_size:
             original_action_shape = list(original_action_shape)
             original_action_shape[0] = self.chunk_size
             original_action_shape = tuple(original_action_shape)
-        
+    
         if episode_len < self.chunk_size:
             episode_len = self.chunk_size
-
+        
         padded_action = np.zeros(original_action_shape, dtype=np.float32)
         padded_action[:action_len] = action
         is_pad = np.zeros(episode_len)
         is_pad[action_len:] = 1
 
         padded_action = padded_action[:self.chunk_size]
-        # print(f"0. padded_action size: {padded_action.shape}")
-
         is_pad = is_pad[:self.chunk_size]
-        # new axis for different cameras
+
         all_cam_images = []
         all_cam_depths = []
-
-        tmp_dir = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/difffusion_input_img'
-        img_dir = os.path.join(tmp_dir, f"{self.exp_type}")
-        os.makedirs(img_dir, exist_ok=True)
-
         for cam_name in self.robot_infor['camera_names']:
-            cur_img = image_dict[self.robot_infor['camera_sensors'][0]][cam_name]
-            # print(f'1 cur_img size: {cur_img.shape}')
-            if self.resize_images:
-                cur_img = cv2.resize(cur_img, dsize=self.new_size)
-                # 2 cur_img size: (480, 640, 3)
-                # print(f'2 cur_img size: {cur_img.shape}')
-            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
-                cur_img = cur_img[:, :, ::-1]
-
-            ## only for check RGB channel order
-            if self.tmp_cnt < 10:
-                img = Image.fromarray((cur_img).astype(np.uint8))
-                img.save(os.path.join(img_dir, str(self.tmp_cnt)+'_rgb.png'))
-            self.tmp_cnt += 1
-
-            all_cam_images.append(cur_img) # rgb
-
-            if self.use_depth_image:
-                depth_image = image_dict[self.robot_infor['camera_sensors'][1]][cam_name] / 1000 # m
-                depth_image_filtered = np.zeros_like(depth_image)
-                depth_image_filtered[(depth_image >= self.min_depth) & (depth_image <= self.max_depth)] = depth_image[
-                    (depth_image >= self.min_depth) & (depth_image <= self.max_depth)]
-                if self.resize_images:
-                    depth_image_filtered = cv2.resize(depth_image_filtered, dsize=self.new_size)
-                    # print(f'2 depth_image_filtered size: {depth_image_filtered.shape}')
-                all_cam_depths.append(depth_image_filtered)
-            else:
-                dummy_depth = np.zeros((480, 640))
-                all_cam_depths.append(dummy_depth)
-
+            all_cam_images.append(image_dict[cam_name])
         all_cam_images = np.stack(all_cam_images, axis=0)
-        all_cam_depths = np.stack(all_cam_depths, axis=0)
-        
+
+        # construct observations
         image_data = torch.from_numpy(all_cam_images)
-
-        all_cam_depths = all_cam_depths.astype(np.float32)
-        depth_data = torch.from_numpy(all_cam_depths)
-
         qpos_data = torch.from_numpy(qpos).float()
         action_data = torch.from_numpy(padded_action).float()
         is_pad = torch.from_numpy(is_pad).bool()
-        image_data = torch.einsum('k h w c -> k c h w', image_data)
-        # image_data size: torch.Size([2, 3, 480, 640])
-        # depth_data size: torch.Size([2, 480, 640])
-        # print(f"image_data size: {image_data.size()}")
-        # print(f"depth_data size: {depth_data.size()}")
 
+        print_memory_info(process, 3)
+
+        # channel last
+        image_data = torch.einsum('k h w c -> k c h w', image_data)
         if self.augment_images:
             for transform in self.aug_trans:
                 image_data = transform(image_data)
-        
-        # normalize image and change dtype to float
+
         image_data = image_data / 255.0
 
         if self.act_norm_class == 'norm1':
@@ -246,26 +225,312 @@ class EpisodicDataset(torch.utils.data.Dataset):
         
         qpos_data = (qpos_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
 
-        lang_embed = control_dict['language_distilbert']
+        depth_data = torch.zeros_like(image_data)
+        
+        print_memory_info(process, 4)
 
-        # print(f"=============+++++++++++")
-        # image_data size: torch.Size([3, 3, 480, 640])
-        # depth_data size: torch.Size([3, 480, 640])
-        # qpos_data size: torch.Size([8])
-        # action_data size: torch.Size([50, 8])
-        # is_pad size: torch.Size([50])
-        # print(f"image_data size: {image_data.size()}")
-        # print(f"depth_data size: {depth_data.size()}")
-        # print(f"qpos_data size: {qpos_data.size()}")
-        # print(f"action_data size: {action_data.size()}")
-        # print(f"is_pad size: {is_pad.size()}")
-        # print(f"lang_embed size: {lang_embed.size()}")
-
-        if self.use_raw_lang:
-            return image_data, depth_data, qpos_data, action_data, is_pad, lang_embed, lang_raw
         return image_data, depth_data, qpos_data, action_data, is_pad, lang_embed
 
-        # return image_data, depth_data, qpos_data, action_data, is_pad
+# old dataset
+# class EpisodicDataset(torch.utils.data.Dataset):
+#     def __init__(self, dataset_path_list, robot_infor, norm_stats, episode_ids, episode_len, chunk_size, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, use_depth_image=False, exp_type='franka_3rgb'):
+#         super(EpisodicDataset).__init__()
+#         self.episode_ids = episode_ids
+#         self.dataset_path_list = dataset_path_list
+#         self.norm_stats = norm_stats
+#         self.episode_len = episode_len
+#         self.chunk_size = chunk_size
+#         self.cumulative_len = np.cumsum(self.episode_len)
+#         self.use_depth_image = use_depth_image
+#         self.min_depth = 0.25
+#         self.max_depth = 1.25
+#         self.robot_infor = robot_infor
+#         self.exp_type = exp_type
+
+#         if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'tiangong_1rgb']:
+#             self.qpos_arm_key = 'puppet'
+#             self.action_arm_key = 'puppet'
+#             self.ctl_elem_key = 'joint_position'
+#         elif exp_type in ['songling_3rgb']:
+#             self.qpos_arm_key = 'puppet'
+#             self.action_arm_key = 'master'
+#             self.ctl_elem_key = ['joint_position_left', 'joint_position_right']
+#         elif exp_type in ['simulation_4rgb']:
+#             self.qpos_arm_key = 'franka'
+#             self.action_arm_key = 'franka'
+#             self.ctl_elem_key = 'joint_position'
+
+#         self.read_h5files = ReadH5Files(self.robot_infor)
+
+#         # todo
+#         # self.path2string_dict = dict()
+#         # for dataset_path in self.dataset_path_list:
+#         #     with h5py.File(dataset_path, 'r') as root:
+#         #         if 'language_raw' in root.keys():
+#         #             lang_raw_utf = root['language_raw'][0].decode('utf-8')
+#         #         else:
+#         #             lang_raw_utf = 'None'
+#         #         self.path2string_dict[dataset_path] = lang_raw_utf
+#         #     root.close()
+        
+#         print(f"len episode_ids: {len(self.episode_ids)}")
+#         print(f"first 10 episode_ids: {self.episode_ids[:10]}")
+#         print(f"len episode_len: {len(self.episode_len)}")
+#         print(f"sum episode_len: {sum(self.episode_len)}")
+#         print(f"len dataset_path_list: {len(self.dataset_path_list)}")
+#         # print(f"total dataset cumulative_len: {self.cumulative_len}")
+
+#         self.max_episode_len = max(episode_len)
+#         self.resize_images = True
+#         print('Initializing resize transformations')
+
+#         # (w, h) for cv2.resize
+#         self.new_size = (640, 480)
+
+#         self.augment_images = use_data_aug
+#         self.aug_trans = None
+#         print(f"cur dataset augment_images: {self.augment_images}")
+#         # augmentation
+#         if self.augment_images is True:
+#             print('Initializing transformations')
+#             # (h, w) for transforms aug
+#             original_size = (480, 640)
+#             ratio = 0.95
+#             self.aug_trans = [
+#                 transforms.RandomCrop(size=[int(original_size[0] * ratio), int(original_size[1] * ratio)]),
+#                 transforms.Resize(original_size, antialias=True),
+#                 transforms.RandomRotation(degrees=[-5.0, 5.0], expand=False),
+#                 transforms.ColorJitter(brightness=0.3, contrast=0.4, saturation=0.5) #, hue=0.08)
+#             ]
+
+#         self.rank = rank
+#         self.transformations = None
+#         self.act_norm_class = act_norm_class
+#         self.use_raw_lang = use_raw_lang
+
+#         self.tmp_cnt = 0
+
+#         ####
+#         # self.read_cnt = 0
+#         # self.image_dict = None
+#         # self.control_dict = None
+#         # self.base_dict = None
+#         # self.exe = None 
+#         # self.is_compress = None
+#         # self.start_ts = None
+
+#         self.__getitem__(0) # initialize self.is_sim and self.transformations
+    
+#     def __len__(self):
+#         return 1000 * sum(self.episode_len)
+
+#     def _locate_transition(self, index):
+#         assert index < self.cumulative_len[-1]
+#         episode_index = np.argmax(self.cumulative_len > index) # argmax returns first True index
+#         start_ts = index - (self.cumulative_len[episode_index] - self.episode_len[episode_index])
+#         episode_id = self.episode_ids[episode_index]
+#         # print(f"index: {index}")
+#         # print(f"self.cumulative_len: {self.cumulative_len}")
+#         # print(f"episode_id: {episode_id}")
+#         # print(f"start_ts: {start_ts}")
+#         return episode_id, start_ts
+
+#     def __getitem__(self, index):
+#         index = index % sum(self.episode_len)  # Ensure index wraps around
+#         episode_id, start_ts = self._locate_transition(index)
+
+#         dataset_path = self.dataset_path_list[episode_id]
+        
+#         print(f"=============")
+#         process = psutil.Process(os.getpid())
+#         print_memory_info(process, 1)
+        
+#         image_dict, control_dict, base_dict, _, is_compress = self.read_h5files.execute(dataset_path, camera_frame=start_ts, use_depth_image=self.use_depth_image)
+
+#         # todo
+#         # if self.read_cnt == 0:
+#         #     image_dict, control_dict, base_dict, exe, is_compress = self.read_h5files.execute(dataset_path, camera_frame=start_ts, use_depth_image=self.use_depth_image)
+#         #     self.image_dict = image_dict
+#         #     self.control_dict = control_dict
+#         #     self.base_dict = base_dict
+#         #     self.exe = exe 
+#         #     self.is_compress = is_compress
+#         #     self.start_ts = start_ts
+#         # else:
+#         #     image_dict = self.image_dict
+#         #     control_dict = self.control_dict
+#         #     base_dict = self.base_dict
+#         #     exe = self.exe 
+#         #     is_compress = self.is_compress
+#         #     start_ts = self.start_ts
+        
+#         # self.read_cnt += 1
+
+#         print_memory_info(process, 2)
+
+#         if self.use_raw_lang:
+#             lang_raw = self.path2string_dict[dataset_path]
+
+#         if isinstance(self.ctl_elem_key, list):
+#             qpos_list = []
+#             action_list = []
+#             for ele in self.ctl_elem_key:
+#                 cur_qpos = control_dict[self.qpos_arm_key][ele][:]
+#                 cur_action = control_dict[self.action_arm_key][ele][:]
+#                 qpos_list.append(cur_qpos)
+#                 action_list.append(cur_action)
+#             qpos = np.concatenate(qpos_list, axis=-1)
+#             action = np.concatenate(action_list, axis=-1)
+#         else:
+#             qpos = control_dict[self.qpos_arm_key][self.ctl_elem_key][:]
+#             action = control_dict[self.action_arm_key][self.ctl_elem_key][:]
+
+#         # print_memory_info(process, 3)
+
+#         # puppet_joint_position = control_dict['puppet']['joint_position'][()]
+#         # action = puppet_joint_position
+#         # print(f"=============")
+#         # print(f"0.0 action shape: {action.shape}")
+
+#         original_action_shape = action.shape
+#         # print(f"0. original_action_shape: {original_action_shape}")
+#         episode_len = original_action_shape[0]
+#         # get observation at start_ts only
+#         # qpos = action[start_ts]
+#         qpos = qpos[start_ts]
+
+#         # if is_sim:
+#         #     action = action[start_ts:]
+#         #     action_len = episode_len - start_ts
+#         # else:
+
+#         # for real-world exp
+#         action = action[max(0, start_ts - 1):]  # hack, to make timesteps more aligned
+#         action_len = episode_len - max(0, start_ts - 1)  # hack, to make timesteps more aligned
+#         # print(f"0. action size: {action.shape}")
+
+#         if original_action_shape[0] < self.chunk_size:
+#             original_action_shape = list(original_action_shape)
+#             original_action_shape[0] = self.chunk_size
+#             original_action_shape = tuple(original_action_shape)
+        
+#         if episode_len < self.chunk_size:
+#             episode_len = self.chunk_size
+
+#         padded_action = np.zeros(original_action_shape, dtype=np.float32)
+#         padded_action[:action_len] = action
+#         is_pad = np.zeros(episode_len)
+#         is_pad[action_len:] = 1
+
+#         padded_action = padded_action[:self.chunk_size]
+#         # print(f"0. padded_action size: {padded_action.shape}")
+
+#         is_pad = is_pad[:self.chunk_size]
+#         # new axis for different cameras
+#         all_cam_images = []
+#         all_cam_depths = []
+
+#         # tmp_dir = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/difffusion_input_img'
+#         # img_dir = os.path.join(tmp_dir, f"{self.exp_type}")
+#         # os.makedirs(img_dir, exist_ok=True)
+
+#         # print_memory_info(process, 4)
+
+#         for cam_name in self.robot_infor['camera_names']:
+#             # print(f"cam_name: {cam_name}")
+#             # print_memory_info(process, 5)
+
+#             cur_img = image_dict[self.robot_infor['camera_sensors'][0]][cam_name]
+#             # print(f'1 cur_img size: {cur_img.shape}')
+#             # todo
+#             # if self.resize_images:
+#             #     cur_img = cv2.resize(cur_img, dsize=self.new_size)
+#                 # 2 cur_img size: (480, 640, 3)
+#                 # print(f'2 cur_img size: {cur_img.shape}')
+#             if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
+#                 cur_img = cur_img[:, :, ::-1]
+
+#             ## only for check RGB channel order
+#             # if self.tmp_cnt < 10:
+#             #     img = Image.fromarray((cur_img).astype(np.uint8))
+#             #     img.save(os.path.join(img_dir, str(self.tmp_cnt)+'_rgb.png'))
+#             # self.tmp_cnt += 1
+
+#             all_cam_images.append(cur_img) # rgb
+
+#             # print_memory_info(process, 6)
+#             if self.use_depth_image:
+#                 depth_image = image_dict[self.robot_infor['camera_sensors'][1]][cam_name] / 1000 # m
+#                 depth_image_filtered = np.zeros_like(depth_image)
+#                 depth_image_filtered[(depth_image >= self.min_depth) & (depth_image <= self.max_depth)] = depth_image[
+#                     (depth_image >= self.min_depth) & (depth_image <= self.max_depth)]
+#                 if self.resize_images:
+#                     depth_image_filtered = cv2.resize(depth_image_filtered, dsize=self.new_size)
+#                     # print(f'2 depth_image_filtered size: {depth_image_filtered.shape}')
+#                 all_cam_depths.append(depth_image_filtered)
+#             else:
+#                 dummy_depth = np.zeros((480, 640))
+#                 all_cam_depths.append(dummy_depth)
+
+#         # print_memory_info(process, 7)
+
+#         all_cam_images = np.stack(all_cam_images, axis=0)
+#         all_cam_depths = np.stack(all_cam_depths, axis=0)
+        
+#         image_data = torch.from_numpy(all_cam_images)
+
+#         all_cam_depths = all_cam_depths.astype(np.float32)
+#         depth_data = torch.from_numpy(all_cam_depths)
+
+#         qpos_data = torch.from_numpy(qpos).float()
+#         action_data = torch.from_numpy(padded_action).float()
+#         is_pad = torch.from_numpy(is_pad).bool()
+#         image_data = torch.einsum('k h w c -> k c h w', image_data)
+#         # image_data size: torch.Size([2, 3, 480, 640])
+#         # depth_data size: torch.Size([2, 480, 640])
+#         # print(f"image_data size: {image_data.size()}")
+#         # print(f"depth_data size: {depth_data.size()}")
+
+#         # print_memory_info(process, 8)
+
+#         if self.augment_images:
+#             for transform in self.aug_trans:
+#                 image_data = transform(image_data)
+        
+#         # normalize image and change dtype to float
+#         image_data = image_data / 255.0
+
+#         if self.act_norm_class == 'norm1':
+#             # normalize to [-1, 1]
+#             action_data = ((action_data - self.norm_stats["action_min"]) / (self.norm_stats["action_max"] - self.norm_stats["action_min"])) * 2 - 1
+#         elif self.act_norm_class == 'norm2':
+#             # normalize to mean 0 std 1
+#             action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
+        
+#         qpos_data = (qpos_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
+
+#         # lang_embed = control_dict['language_distilbert']
+#         lang_embed = torch.zeros(1)
+
+#         # print_memory_info(process, 9)
+#         # print(f"=============+++++++++++")
+#         # image_data size: torch.Size([3, 3, 480, 640])
+#         # depth_data size: torch.Size([3, 480, 640])
+#         # qpos_data size: torch.Size([8])
+#         # action_data size: torch.Size([50, 8])
+#         # is_pad size: torch.Size([50])
+#         # print(f"image_data size: {image_data.size()}")
+#         # print(f"depth_data size: {depth_data.size()}")
+#         # print(f"qpos_data size: {qpos_data.size()}")
+#         # print(f"action_data size: {action_data.size()}")
+#         # print(f"is_pad size: {is_pad.size()}")
+#         # print(f"lang_embed size: {lang_embed.size()}")
+
+#         if self.use_raw_lang:
+#             return image_data, depth_data, qpos_data, action_data, is_pad, lang_embed, lang_raw
+#         return image_data, depth_data, qpos_data, action_data, is_pad, lang_embed
+
+#         # return image_data, depth_data, qpos_data, action_data, is_pad
 
 
 def get_files(dataset_dir, robot_infor):
@@ -551,9 +816,9 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
         val_dataset = EpisodicDataset(val_dataset_path_fla_list, robot_infor, norm_stats, val_episode_ids, val_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image, exp_type=exp_type)
 
         # train_num_workers = 0
-        train_num_workers = 4 #16
+        train_num_workers = 0 #4 #16
         # val_num_workers = 0
-        val_num_workers = 4 #16
+        val_num_workers = 0 #4 #16
         # print(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
         logger.info(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
         # pin_memory=True

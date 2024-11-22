@@ -311,6 +311,9 @@ class VLAIL:
         loss = -1.0
         
         for step in tqdm(range(curr_step, self.args['num_steps'])):
+            # if step % 50 == 0:
+            #     gc.collect()
+
             if step % self.args['validate_every'] == 0:
                 if rank == 0:
                     # print('validating')
@@ -322,6 +325,9 @@ class VLAIL:
                     validation_dicts = []
                     for batch_idx, data in enumerate(val_dataloader):
                         forward_dict = forward_pass(data, self.agent, self.args['use_lang'], use_raw_lang=self.args['use_raw_lang'], use_depth_image=self.args['use_depth_image'])
+
+                        # if batch_idx % 50 == 0:
+                        #     gc.collect()
 
                         validation_dicts.append(forward_dict)
                         if batch_idx > 3:
@@ -465,8 +471,10 @@ def cleanup():
 
 def main(args):
     world_size = torch.cuda.device_count()
-    mp.spawn(train_VLAIL, args=(world_size, args), nprocs=world_size, join=True)
-
+    if torch.cuda.device_count() > 1:
+        mp.spawn(train_VLAIL, args=(world_size, args), nprocs=world_size, join=True)
+    else:
+        train_VLAIL(0, 1, args)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

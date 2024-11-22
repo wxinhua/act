@@ -58,12 +58,12 @@ class ReadH5Files():
 
             lang_embed = None
             # print(f"root keys: {root.keys()}")
-            if 'language_distilbert' in root:
-                lang_embed = root['language_distilbert'][:]
-                lang_embed = torch.from_numpy(lang_embed).float().squeeze()
-            else:
-                # dummy value
-                lang_embed = torch.zeros(1)
+            # if 'language_distilbert' in root:
+            #     lang_embed = root['language_distilbert'][:]
+            #     lang_embed = torch.from_numpy(lang_embed).float().squeeze()
+            # else:
+            #     # dummy value
+            #     lang_embed = torch.zeros(1)
             control_dict['language_distilbert'] = lang_embed
 
             # print(f"is_compress: {is_compress}")
@@ -130,7 +130,9 @@ class ReadH5Files():
                     else:
                         control_dict[arm_name][control] = root[arm_name][control][()]
             # print('infor_dict:',infor_dict)
-        # gc.collect()
+        del decode_rgb, decode_depth
+        gc.collect()
+        root.close()
         return image_dict, control_dict, base_dict, is_sim, is_compress
 
 
