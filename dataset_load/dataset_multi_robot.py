@@ -21,11 +21,12 @@ import psutil
 import os
 from torch.utils.data import Sampler, DistributedSampler
 
+# process = psutil.Process(os.getpid())
+# print_memory_info(process, 1)
 def print_memory_info(process, idx):
     used_bytes = process.memory_info().rss
     used_MB = used_bytes / (1024*1024)
     print(f"{idx}. used_MB: {used_MB}")
-
 
 class EpisodicDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_path_list, robot_infor, norm_stats, episode_ids, episode_len, chunk_size, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, use_depth_image=False, exp_type='franka_3rgb'):
@@ -57,16 +58,15 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         self.read_h5files = ReadH5Files(self.robot_infor)
 
-        # todo
-        # self.path2string_dict = dict()
-        # for dataset_path in self.dataset_path_list:
-        #     with h5py.File(dataset_path, 'r') as root:
-        #         if 'language_raw' in root.keys():
-        #             lang_raw_utf = root['language_raw'][0].decode('utf-8')
-        #         else:
-        #             lang_raw_utf = 'None'
-        #         self.path2string_dict[dataset_path] = lang_raw_utf
-        #     root.close()
+        self.path2string_dict = dict()
+        for dataset_path in self.dataset_path_list:
+            with h5py.File(dataset_path, 'r') as root:
+                if 'language_raw' in root.keys():
+                    lang_raw_utf = root['language_raw'][0].decode('utf-8')
+                else:
+                    lang_raw_utf = 'None'
+                self.path2string_dict[dataset_path] = lang_raw_utf
+            root.close()
         
         print(f"len episode_ids: {len(self.episode_ids)}")
         print(f"first 10 episode_ids: {self.episode_ids[:10]}")
@@ -105,15 +105,6 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         self.tmp_cnt = 0
 
-        ####
-        # self.read_cnt = 0
-        # self.image_dict = None
-        # self.control_dict = None
-        # self.base_dict = None
-        # self.exe = None 
-        # self.is_compress = None
-        # self.start_ts = None
-
         self.__getitem__(0) # initialize self.is_sim and self.transformations
     
     def __len__(self):
@@ -136,32 +127,8 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         dataset_path = self.dataset_path_list[episode_id]
         
-        # print(f"=============")
-        # process = psutil.Process(os.getpid())
-        # print_memory_info(process, 1)
         
         image_dict, control_dict, base_dict, _, is_compress = self.read_h5files.execute(dataset_path, camera_frame=start_ts, use_depth_image=self.use_depth_image)
-
-        # todo
-        # if self.read_cnt == 0:
-        #     image_dict, control_dict, base_dict, exe, is_compress = self.read_h5files.execute(dataset_path, camera_frame=start_ts, use_depth_image=self.use_depth_image)
-        #     self.image_dict = image_dict
-        #     self.control_dict = control_dict
-        #     self.base_dict = base_dict
-        #     self.exe = exe 
-        #     self.is_compress = is_compress
-        #     self.start_ts = start_ts
-        # else:
-        #     image_dict = self.image_dict
-        #     control_dict = self.control_dict
-        #     base_dict = self.base_dict
-        #     exe = self.exe 
-        #     is_compress = self.is_compress
-        #     start_ts = self.start_ts
-        
-        # self.read_cnt += 1
-
-        # print_memory_info(process, 2)
 
         if self.use_raw_lang:
             lang_raw = self.path2string_dict[dataset_path]
@@ -180,24 +147,12 @@ class EpisodicDataset(torch.utils.data.Dataset):
             qpos = control_dict[self.qpos_arm_key][self.ctl_elem_key][:]
             action = control_dict[self.action_arm_key][self.ctl_elem_key][:]
 
-        # print_memory_info(process, 3)
-
-        # puppet_joint_position = control_dict['puppet']['joint_position'][()]
-        # action = puppet_joint_position
-        # print(f"=============")
-        # print(f"0.0 action shape: {action.shape}")
-
         original_action_shape = action.shape
         # print(f"0. original_action_shape: {original_action_shape}")
         episode_len = original_action_shape[0]
         # get observation at start_ts only
         # qpos = action[start_ts]
         qpos = qpos[start_ts]
-
-        # if is_sim:
-        #     action = action[start_ts:]
-        #     action_len = episode_len - start_ts
-        # else:
 
         # for real-world exp
         action = action[max(0, start_ts - 1):]  # hack, to make timesteps more aligned
@@ -229,11 +184,8 @@ class EpisodicDataset(torch.utils.data.Dataset):
         # img_dir = os.path.join(tmp_dir, f"{self.exp_type}")
         # os.makedirs(img_dir, exist_ok=True)
 
-        # print_memory_info(process, 4)
-
         for cam_name in self.robot_infor['camera_names']:
             # print(f"cam_name: {cam_name}")
-            # print_memory_info(process, 5)
 
             cur_img = image_dict[self.robot_infor['camera_sensors'][0]][cam_name]
             # print(f'1 cur_img size: {cur_img.shape}')
@@ -271,7 +223,8 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         all_cam_images = np.stack(all_cam_images, axis=0)
         all_cam_depths = np.stack(all_cam_depths, axis=0)
-        
+        all_cam_images = (all_cam_images / 255.0).astype(np.float32)
+
         image_data = torch.from_numpy(all_cam_images)
 
         all_cam_depths = all_cam_depths.astype(np.float32)
@@ -293,7 +246,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 image_data = transform(image_data)
         
         # normalize image and change dtype to float
-        image_data = image_data / 255.0
+        # image_data = image_data / 255.0
 
         if self.act_norm_class == 'norm1':
             # normalize to [-1, 1]

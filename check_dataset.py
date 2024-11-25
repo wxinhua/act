@@ -163,7 +163,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         
         # print(f"=============")
         # print(f"xxxxxxxxxxxxxx")
-        # process = psutil.Process(os.getpid())
+        process = psutil.Process(os.getpid())
         # print_memory_info(process, 2)
         
         # ### todo
@@ -187,18 +187,19 @@ class EpisodicDataset(torch.utils.data.Dataset):
             all_cam_images.append(image_dict[cam_name])
         all_cam_images1 = np.stack(all_cam_images, axis=0)
         # all_cam_images = torch.stack(all_cam_images, axis=0)
+        ## right 
+        all_cam_images1 = (all_cam_images1 / 255.0).astype(np.float32)
 
         # construct observations
-        image_data = torch.from_numpy(all_cam_images1).float()
+        image_data = torch.from_numpy(all_cam_images1)
 
         # print_memory_info(process, 4)
-
-        image_data1 = image_data / 255.0
-
+        # memory leakage
+        # image_data1 = image_data / 255.0
 
         print_memory_info(process, 5)
 
-        return image_data1
+        return image_data
 
 
 def get_files(dataset_dir, robot_infor):

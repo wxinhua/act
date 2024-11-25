@@ -10,7 +10,7 @@ from copy import deepcopy
 from tqdm import tqdm
 import sys
 import gc
-
+import psutil
 import wandb
 import torch
 import cv2
@@ -102,6 +102,13 @@ def forward_pass(data, agent, use_lang, use_raw_lang, use_depth_image):
     if use_raw_lang:
         return agent(qpos_data, image_data, depth_data, action_data, is_pad, language_distilbert=lang_embed, lang_raw=lang_raw)
     return agent(qpos_data, image_data, depth_data, action_data, is_pad, language_distilbert=lang_embed) # TODO remove None
+
+# process = psutil.Process(os.getpid())
+# print_memory_info(process, 1)
+def print_memory_info(process, idx):
+    used_bytes = process.memory_info().rss
+    used_MB = used_bytes / (1024*1024)
+    print(f"{idx}. used_MB: {used_MB}")
 
 
 class VLAIL:
@@ -330,7 +337,7 @@ class VLAIL:
                         #     gc.collect()
 
                         validation_dicts.append(forward_dict)
-                        if batch_idx > 3:
+                        if batch_idx > 50: # 3 
                             break
 
                     validation_summary = compute_dict_mean(validation_dicts)
