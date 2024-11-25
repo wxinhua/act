@@ -315,7 +315,6 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
         qpos_arm_key = 'franka'
         action_arm_key = 'franka'
         ctl_elem_key = 'joint_position'
-    
 
     for list_id, cur_dataset_path_list in enumerate([train_dataset_path_list, val_dataset_path_list]):
         cur_episode_len = []
