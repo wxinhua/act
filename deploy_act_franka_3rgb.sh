@@ -15,7 +15,7 @@ python3 deploy_algo.py \
         --camera_names left right top \
         --ckpt_dir /media/ps/wk/benchmark_results/act/franka_3rgb_241021_insert_marker_1/ckpt \
         --exp_type franka_3rgb \
-        --ckpt_name policy_last.ckpt \
+        --ckpt_name agent_best.ckpt \
         --agent_class ACT \
         --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
         --kl_weight 10 \

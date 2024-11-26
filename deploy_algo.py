@@ -15,14 +15,12 @@ import cv2
 from einops import rearrange
 import argparse
 import yaml
+from PIL import Image
 
-sys.path.append('/home/ps/Dev/inrocs/')
 # Get the current working directory
 current_directory = os.getcwd()
 # Append the current working directory to sys.path
 sys.path.append(current_directory)
-
-from robot_env.franka_env import robot_env
 
 from agent.act import ACTPolicy
 from agent.droid_difffusion import DroidDiffusionPolicy
@@ -182,14 +180,18 @@ class InferVLAIL():
                 curr_image = cv2.resize(curr_image, dsize=img_new_size)
                 # print('2 curr_image:',curr_image.shape)
 
-            # 'franka_3rgb'
-            if self.exp_type in ['franka_3rgb','franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
+            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
                 curr_image = curr_image[:, :, ::-1]
 
-            cv2.imshow(f"{cam_name} image", curr_image)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-            # cv2.waitKey()
+            # img_dir = '/home/ps/wk/tmp'
+            # if self.tmp_cnt < 10:
+            #     img = Image.fromarray((curr_image).astype(np.uint8))
+            #     img.save(os.path.join(img_dir, str(self.tmp_cnt)+'_rgb.png'))
+            # self.tmp_cnt += 1
+
+            # cv2.imshow(f"{cam_name} image", curr_image)
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
 
             # curr_image = rearrange(curr_image, 'h w c -> c h w')
             # curr_image: (3, 480, 640)
@@ -210,6 +212,8 @@ class InferVLAIL():
     def get_model_input(self, obs, rand_crop_resize):
         qpos = self.get_qpos(obs)
         input_qpos = self.qpos_pre_process(qpos, self.dataset_stats)
+        
+        self.tmp_cnt = 0
         input_image = self.get_image(obs)
         input_depth = None
         # input_qpos: (8,)
@@ -252,6 +256,10 @@ class InferVLAIL():
 
         self.print_color("\nReady for Start 🚀🚀🚀", color="green", attrs=("bold",))
         os.system("espeak start")
+
+        if self.exp_type == 'franka_3rgb':
+            sys.path.append('/home/ps/Dev/inrocs/')
+            from robot_env.franka_env import robot_env
 
         # warm up
         obs = robot_env.get_obs()
