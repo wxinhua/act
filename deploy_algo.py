@@ -261,6 +261,9 @@ class InferVLAIL():
         if self.exp_type == 'franka_3rgb':
             sys.path.append('/home/ps/Dev/inrocs/')
             from robot_env.franka_env import robot_env
+        elif self.exp_type == 'ur_1rgb':
+            sys.path.append("/home/ps/work_sapce_hqr/inrocs")
+            from robot_env.ur_env import robot_env
 
         # warm up
         obs = robot_env.get_obs()
