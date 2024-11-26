@@ -8,38 +8,29 @@
 # export HF_HOME=/nfsroot/DATA/IL_Research/wk/huggingface_model
 # export TORCH_HOME=/nfsroot/DATA/IL_Research/wk/torch_model
 
-# CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
-#         --task_name multi_task_2 \
-#         --camera_names camera_top \
-#         --ckpt_dir ./ckpt_dir/DroidDiffusion_camt/241112/table/franka_1rgb_multi_task_2_lr1e5_batch24_chunk16 \
-#         --exp_type franka_1rgb \
-#         --agent_class DroidDiffusion \
-#         --batch_size_train 24 --batch_size_val 24 \
-#         --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
-#         --lr 1e-4 --lr_backbone 1e-4 \
-#         --backbone 'resnet18' \
-#         --act_norm_class norm1 \
-#         --lr_scheduler CosineLR \
-#         --pool_class 'SpatialSoftmax' --use_data_aug \
-#         --num_steps 20 --eval_every 21 --validate_every 10 --save_every 10 \
-#         --use_wandb \
-#         --wandb_name DroidDiffusion_franka_1rgb_camt_multi_task_2_lr1e5_batch24_chunk16 \
+#### baidu
+export HF_HOME=/media/users/wk/huggingface_model
+export TORCH_HOME=/media/users/wk/torch_model
 
 # --batch_size_train 24 --batch_size_val 24 \
+# multi_task_2
+# bread_in_basket
+# --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
+
 CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
-        --task_name multi_task_2 \
+        --task_name bread_in_basket \
         --camera_names camera_top \
-        --ckpt_dir ./ckpt_dir/DroidDiffusion_camt/241112/table/franka_1rgb_multi_task_2_lr1e5_batch24_chunk16 \
+        --ckpt_dir ./ckpt_dir/DroidDiffusion_camt/241112/table/franka_1rgb_bread_in_basket_lr1e5_batch24_chunk16 \
         --exp_type franka_1rgb \
         --agent_class DroidDiffusion \
-        --batch_size_train 4 --batch_size_val 4 \
+        --batch_size_train 48 --batch_size_val 48 \
         --chunk_size 16 --hidden_dim 512 --dim_feedforward 3200 \
-        --lr 1e-4 --lr_backbone 1e-4 --use_lang \
-        --backbone 'resnet18' \
+        --lr 1e-4 --lr_backbone 1e-4 \
+        --backbone 'resnet50' \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
         --pool_class 'SpatialSoftmax' --use_data_aug \
-        --num_steps 20 --eval_every 21 --validate_every 10 --save_every 10 \
+        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
-        --wandb_name DroidDiffusion_franka_1rgb_camt_multi_task_2_lr1e5_batch24_chunk16 \
+        --wandb_name DroidDiffusion_franka_1rgb_camt_bread_in_basket_lr1e5_batch24_chunk16 \
 

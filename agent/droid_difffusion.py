@@ -442,7 +442,7 @@ class DroidDiffusionPolicy(nn.Module):
                 # cam_features = self.input_proj(features)
                 cam_features = features
                 # cam_features size: torch.Size([24, 512, 15, 20])
-                print(f"cam_features size: {cam_features.size()}")
+                # print(f"cam_features size: {cam_features.size()}")
 
                 pool_features = nets['policy']['pools'][cam_id](cam_features)
                 # resnet18: 1. pool_features: torch.Size([64, 512, 2])
@@ -496,9 +496,9 @@ class DroidDiffusionPolicy(nn.Module):
             # noisy_actions size: torch.Size([512, 50, 10])
             # timesteps size: torch.Size([512])
             # obs_cond size: torch.Size([512, 1031])
-            print(f"noisy_actions size: {noisy_actions.size()}")
-            print(f"timesteps size: {timesteps.size()}")
-            print(f"obs_cond size: {obs_cond.size()}")
+            # print(f"noisy_actions size: {noisy_actions.size()}")
+            # print(f"timesteps size: {timesteps.size()}")
+            # print(f"obs_cond size: {obs_cond.size()}")
             # predict the noise residual
             noise_pred = nets['policy']['noise_pred_net'](noisy_actions, timesteps, global_cond=obs_cond)
             
@@ -512,8 +512,8 @@ class DroidDiffusionPolicy(nn.Module):
             all_l2 = F.mse_loss(noise_pred, noise, reduction='none')
             # is_pad size: torch.Size([64, 60])
             # all_l2 size: torch.Size([512, 60, 10])
-            print(f"is_pad size: {is_pad.size()}")
-            print(f"all_l2 size: {all_l2.size()}")
+            # print(f"is_pad size: {is_pad.size()}")
+            # print(f"all_l2 size: {all_l2.size()}")
             loss = (all_l2 * ~is_pad.unsqueeze(-1)).mean()
 
             loss_dict = {}

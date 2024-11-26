@@ -172,6 +172,7 @@ class VLAIL:
         self.logger.addHandler(self.log_fileHandler)
 
     def execute(self, task_name):
+        # print(f"execute is called!")
         # exp type: franka_3rgb, franka_1rgb, ur_1rgb, songling_3rgb, tiangong_1rgb, sim
         # if self.args['exp_type'] == 'franka_3rgb':
         #     from cfgs.constants_config import Franka_3rgb_TASK_CONFIGS as TASK_CONFIGS

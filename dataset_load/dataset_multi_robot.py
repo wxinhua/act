@@ -292,6 +292,7 @@ def get_files(dataset_dir, robot_infor):
             _, control_dict, base_dict, _, is_compress = read_h5files.execute(file_path, camera_frame=2)
             files.append(file_path)
         except Exception as e:
+            print(f"Open {file_path} fail!")
             print(e)
     return files
 
@@ -428,7 +429,6 @@ class DistributedBatchSampler(torch.utils.data.Sampler):
         return len(self.dist_sampler) // self.batch_size
     
 
-
 def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chunk_size, use_depth_image=False, sample_weights=None, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, name_filter=None, exp_type='franka_3rgb', logger=None):
     if type(dataset_dir_l) == str:
         dataset_dir_l = [dataset_dir_l]
@@ -436,6 +436,7 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
     # [[task1_epi1, task1_epi2], [task2_epi1, task2_epi2]]
     train_dataset_path_list_list = []
     val_dataset_path_list_list = []
+    # logger.info(f"load_data is called!")
     for dataset_dir in dataset_dir_l:
         # hdf5_files_list = find_all_hdf5(dataset_dir) 
         # obtain train test split
@@ -449,7 +450,7 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
 
         # hdf5_files_list = get_files(dataset_dir, robot_infor)
         # dataset_path_list_list.append(hdf5_files_list)
-    
+
     train_num_episodes_l = [len(cur_dataset_path_list) for cur_dataset_path_list in train_dataset_path_list_list]
     train_num_episodes_cumsum = np.cumsum(train_num_episodes_l)
     val_num_episodes_l = [len(cur_dataset_path_list) for cur_dataset_path_list in val_dataset_path_list_list]
