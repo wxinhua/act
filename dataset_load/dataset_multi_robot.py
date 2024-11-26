@@ -43,7 +43,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         self.robot_infor = robot_infor
         self.exp_type = exp_type
 
-        if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'tiangong_1rgb']:
+        if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb']:
             self.qpos_arm_key = 'puppet'
             self.action_arm_key = 'puppet'
             self.ctl_elem_key = 'joint_position'
@@ -55,6 +55,10 @@ class EpisodicDataset(torch.utils.data.Dataset):
             self.qpos_arm_key = 'franka'
             self.action_arm_key = 'franka'
             self.ctl_elem_key = 'joint_position'
+        elif exp_type in ['tiangong_1rgb']:
+            self.qpos_arm_key = 'puppet'
+            self.action_arm_key = 'puppet'
+            self.ctl_elem_key = ['end_effector', 'joint_position']
 
         self.read_h5files = ReadH5Files(self.robot_infor)
 
@@ -304,7 +308,7 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
     val_episode_len = []
     train_episode_len = []
 
-    if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'tiangong_1rgb']:
+    if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb']:
         qpos_arm_key = 'puppet'
         action_arm_key = 'puppet'
         ctl_elem_key = 'joint_position'
@@ -316,6 +320,10 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
         qpos_arm_key = 'franka'
         action_arm_key = 'franka'
         ctl_elem_key = 'joint_position'
+    elif exp_type in ['tiangong_1rgb']:
+        qpos_arm_key = 'puppet'
+        action_arm_key = 'puppet'
+        ctl_elem_key = ['end_effector', 'joint_position']
 
     for list_id, cur_dataset_path_list in enumerate([train_dataset_path_list, val_dataset_path_list]):
         cur_episode_len = []
