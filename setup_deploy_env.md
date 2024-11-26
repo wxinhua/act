@@ -42,6 +42,14 @@
 
 5. In the deployment machine
     conda activate wk_act
+    cd /home/ps/wk/github/act_benchmark
+    ./deploy_act_franka_3rgb.sh
+
+    task information
+    /media/ps/wk/benchmark_results/act/franka_3rgb_241021_insert_marker_1
+
+    ##############
+    conda activate wk_act
     cd /home/ps/Dev/inrocs
     Example:
         cd run

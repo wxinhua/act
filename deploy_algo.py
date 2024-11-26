@@ -159,7 +159,7 @@ class InferVLAIL():
             args = tuple(termcolor.colored(arg, color=color, attrs=attrs) for arg in args)
         print(*args, **kwargs)
 
-    def get_image(self, obs):
+    def get_image(self, obs, show_img=False):
         # (w, h) for cv2.resize
         img_new_size = (640, 480) #(480, 640)
         all_cam_images = []
@@ -180,6 +180,11 @@ class InferVLAIL():
                 curr_image = cv2.resize(curr_image, dsize=img_new_size)
                 # print('2 curr_image:',curr_image.shape)
 
+            if show_img:
+                cv2.imshow(f"{cam_name} image", curr_image)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
             if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
                 curr_image = curr_image[:, :, ::-1]
 
@@ -187,11 +192,7 @@ class InferVLAIL():
             # if self.tmp_cnt < 10:
             #     img = Image.fromarray((curr_image).astype(np.uint8))
             #     img.save(os.path.join(img_dir, str(self.tmp_cnt)+'_rgb.png'))
-            # self.tmp_cnt += 1
-
-            # cv2.imshow(f"{cam_name} image", curr_image)
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
+            # self.tmp_cnt += 1            
 
             # curr_image = rearrange(curr_image, 'h w c -> c h w')
             # curr_image: (3, 480, 640)
@@ -269,7 +270,11 @@ class InferVLAIL():
         print("enter enter to go")
         global preparing
         while preparing:
-            ...
+            # ...
+            obs = robot_env.get_obs()
+            input_image = self.get_image(obs, show_img=True)
+            # print('***obs***:', obs)
+
         preparing = True
         ###
         for i in range(2):
