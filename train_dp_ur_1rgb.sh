@@ -30,7 +30,7 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
         --pool_class 'SpatialSoftmax' --use_data_aug \
-        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
+        --num_steps 20 --eval_every 21 --validate_every 10 --save_every 20 \
         --use_wandb \
         --wandb_name DroidDiffusion_ur_1rgb_camt_open_top_white_drawer_lr1e5_batch24_chunk16 \
 

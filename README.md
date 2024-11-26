@@ -1,7 +1,7 @@
 # Data_Script
 
 ## Installation
-This code has been tested with python=3.8.12, CUDA12.1, Ubuntu22
+This code has been tested with python=3.10, CUDA12.1, Ubuntu22
 
 ### Configure the environment
 1、Install torch、torchvision、torchaudio
@@ -9,8 +9,10 @@ This code has been tested with python=3.8.12, CUDA12.1, Ubuntu22
 pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
 ```
 2、Install others
+h5py >= 3.12
 ```
 pip install -r requirements.txt
+pip install huggingface_hub==0.24.7
 ```
 
 3. Install robomimic for droid diffusion
