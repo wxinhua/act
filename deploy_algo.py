@@ -14,14 +14,13 @@ import torch
 import cv2
 from einops import rearrange
 import argparse
+import yaml
+from PIL import Image
 
-sys.path.append('/home/ps/Dev/inrocs/')
 # Get the current working directory
 current_directory = os.getcwd()
 # Append the current working directory to sys.path
 sys.path.append(current_directory)
-
-from robot_env.franka_env import robot_env
 
 from agent.act import ACTPolicy
 from agent.droid_difffusion import DroidDiffusionPolicy
@@ -64,7 +63,7 @@ class InferVLAIL():
         if not os.path.isdir(self.args['ckpt_dir']):
             print(f"ckpt_dir {ckpt_dir} does not exist!!")
         
-        stats_path = os.path.join(self.ckpt_dir, f'dataset_stats.pkl')
+        stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
         with open(stats_path, 'rb') as f:
             self.dataset_stats = pickle.load(f)
 
@@ -129,6 +128,8 @@ class InferVLAIL():
             action = ((action + 1) / 2) * (stats['action_max'] - stats['action_min']) + stats['action_min']
         elif act_norm_class == 'norm2':
             action = action * stats['action_std'] + stats['action_mean']
+        
+        return action
 
     def load_ckpt(self, load_ckpt_path=None):
         # if load_ckpt_path is not None:
@@ -158,7 +159,7 @@ class InferVLAIL():
             args = tuple(termcolor.colored(arg, color=color, attrs=attrs) for arg in args)
         print(*args, **kwargs)
 
-    def get_image(self, obs):
+    def get_image(self, obs, show_img=False):
         # (w, h) for cv2.resize
         img_new_size = (640, 480) #(480, 640)
         all_cam_images = []
@@ -178,11 +179,20 @@ class InferVLAIL():
                 # print('1 curr_image:',curr_image.shape)
                 curr_image = cv2.resize(curr_image, dsize=img_new_size)
                 # print('2 curr_image:',curr_image.shape)
-            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
-                cur_img = cur_img[:, :, ::-1]
 
-            # cv2.imshow("image", curr_image)
-            # cv2.waitKey()
+            if show_img:
+                cv2.imshow(f"{cam_name} image", curr_image)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
+                curr_image = curr_image[:, :, ::-1]
+
+            # img_dir = '/home/ps/wk/tmp'
+            # if self.tmp_cnt < 10:
+            #     img = Image.fromarray((curr_image).astype(np.uint8))
+            #     img.save(os.path.join(img_dir, str(self.tmp_cnt)+'_rgb.png'))
+            # self.tmp_cnt += 1            
 
             # curr_image = rearrange(curr_image, 'h w c -> c h w')
             # curr_image: (3, 480, 640)
@@ -203,17 +213,23 @@ class InferVLAIL():
     def get_model_input(self, obs, rand_crop_resize):
         qpos = self.get_qpos(obs)
         input_qpos = self.qpos_pre_process(qpos, self.dataset_stats)
+        
+        self.tmp_cnt = 0
         input_image = self.get_image(obs)
         input_depth = None
-        print(f"input_qpos: {curr_image.shape}")
+        # input_qpos: (8,)
+        # input_image: (3, 480, 640, 3)
+        print(f"input_qpos: {input_qpos.shape}")
         print(f"input_image: {input_image.shape}")
-        print(f"input_depth: {input_depth.shape}")
+        # print(f"input_depth: {input_depth.shape}")
 
         qpos_data = torch.from_numpy(input_qpos).float()
         image_data = torch.from_numpy(input_image)
         # k is the number of camera
         image_data = torch.einsum('k h w c -> k c h w', image_data)
         
+        qpos_data = qpos_data.unsqueeze(0)
+        image_data = image_data.unsqueeze(0)
         qpos_data = qpos_data.cuda()
         image_data = image_data.cuda()
         # use_data_aug True in training
@@ -242,6 +258,13 @@ class InferVLAIL():
         self.print_color("\nReady for Start 🚀🚀🚀", color="green", attrs=("bold",))
         os.system("espeak start")
 
+        if self.exp_type == 'franka_3rgb':
+            sys.path.append('/home/ps/Dev/inrocs/')
+            from robot_env.franka_env import robot_env
+        elif self.exp_type == 'ur_1rgb':
+            sys.path.append("/home/ps/work_sapce_hqr/inrocs")
+            from robot_env.ur_env import robot_env
+
         # warm up
         obs = robot_env.get_obs()
         print('***obs***:', obs)
@@ -250,13 +273,17 @@ class InferVLAIL():
         print("enter enter to go")
         global preparing
         while preparing:
-            ...
+            # ...
+            obs = robot_env.get_obs()
+            input_image = self.get_image(obs, show_img=True)
+            # print('***obs***:', obs)
+
         preparing = True
         ###
         for i in range(2):
             obs = robot_env.get_obs()
 
-        max_timesteps = self.episode_len
+        max_timesteps = self.args['episode_len']
 
         temporal_agg = self.args['temporal_agg']
         chunk_size = self.args['chunk_size']
@@ -265,7 +292,8 @@ class InferVLAIL():
         rand_crop_resize = self.args['use_data_aug']
 
         if temporal_agg:
-            all_time_actions = np.zeros([max_timesteps, max_timesteps + chunk_size, action_dim])
+            # all_time_actions = np.zeros([max_timesteps, max_timesteps + chunk_size, action_dim])
+            all_time_actions = torch.zeros([max_timesteps, max_timesteps+chunk_size, action_dim]).cuda()
             query_frequency = 1
         else:
             query_frequency = chunk_size
@@ -279,6 +307,7 @@ class InferVLAIL():
                 if self.args['agent_class'] == 'ACT':
                     if t % query_frequency == 0:
                         all_actions = self.agent(qpos_data, image_data, input_depth, language_distilbert=self.encoded_lang)
+                        # all_actions = all_actions.cpu().numpy()
                     
                     if temporal_agg:
                         infer_chunk = chunk_size
@@ -325,16 +354,19 @@ class InferVLAIL():
                         print(f"t: {t}, raw_action: {raw_action.size()}")
 
                 raw_action = raw_action.squeeze(0).cpu().numpy()
-                action_pred = self.action_post_process(raw_action)
+                action_pred = self.action_post_process(raw_action, self.dataset_stats)
+                print(f"action_pred size: {action_pred.shape}")
                 obs = robot_env.step(action_pred)
 
 def get_arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
     parser.add_argument('--camera_names', nargs='+', help='<Required> Set flag', required=True)
     parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
     parser.add_argument('--ckpt_name', action='store', type=str, help='ckpt_name', required=True)
     parser.add_argument('--agent_class', action='store', type=str, help='agent_class, capitalize', required=True)
     
+    parser.add_argument('--num_steps', action='store', type=int, help='num_steps', default=0)
     parser.add_argument('--use_depth_image', action='store', type=bool, help='use_depth_image', default=False, required=False)
 
     parser.add_argument('--use_raw_lang', action='store_true')
