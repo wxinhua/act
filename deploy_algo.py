@@ -165,7 +165,11 @@ class InferVLAIL():
         all_cam_images = []
         self.resize_images = True
         for cam_name in self.args['camera_names']:
-            curr_image = obs['images'][cam_name]
+            if self.exp_type == 'tiangong_1rgb':
+                curr_image = obs[cam_name][-1]
+            else:
+                # for franka_3rgb, ur_1rgb
+                curr_image = obs['images'][cam_name]
             print(f'{cam_name} curr_image:',curr_image.shape)
             # rgb_image_encode = cv2.imencode(".jpg", curr_image)[1]
             rgb_image_encode = curr_image
@@ -207,7 +211,16 @@ class InferVLAIL():
     def get_qpos(self, obs):
         # incros/incros/robot_env/franka_env.py
         # incros/incros/robot_env/ur_env.py
-        qpos = obs['qpos']
+        if self.exp_type == 'tiangong_1rgb':
+            joint_states = obs['joint_states']
+            # np [7]
+            left_arm_jpos = joint_states['left_arm_jpos']
+            # np [7]
+            right_arm_jpos = joint_states['right_arm_jpos']
+            qpos = np.concat([left_arm_jpos, right_arm_jpos])
+        else:
+            # for franka_3rgb, ur_1rgb
+            qpos = obs['qpos']
         return qpos
 
     def get_model_input(self, obs, rand_crop_resize):
@@ -264,6 +277,20 @@ class InferVLAIL():
         elif self.exp_type == 'ur_1rgb':
             sys.path.append("/home/ps/work_sapce_hqr/inrocs")
             from robot_env.ur_env import robot_env
+        elif self.exp_type == 'tiangong_1rgb':
+            sys.path.append('/home/ps/code_lei/inrocs')
+            os.environ["ROS_MASTER_URI"] = "http://192.168.41.1:11311"
+            os.environ["ROS_IP"] = "192.168.41.55"
+            from robot_env.tiangong_env_5hz import  TiangongEnv
+            robot_env = TiangongEnv(
+                camera_topic="/camera/color/image_raw",
+                left_arm_ctrl_topic="/human_arm_ctrl_left",
+                right_arm_ctrl_topic="/human_arm_ctrl_right",
+                left_arm_state_topic="/human_arm_state_left",
+                right_arm_state_topic="/human_arm_state_right",
+                left_hand_topic="/inspire_hand/ctrl/left_hand",
+                right_hand_topic="/inspire_hand/ctrl/right_hand"
+            )
 
         # warm up
         obs = robot_env.get_obs()
