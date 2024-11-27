@@ -7,12 +7,14 @@ export TORCH_HOME=/media/users/wk/torch_model
 TASK_NAME=""
 EXP_TYPE=""
 DAY="251127"
+TG_MODE="mode1"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --task_name) TASK_NAME="$2"; shift ;;
         --exp_type) EXP_TYPE="$2"; shift ;;
         --day) DAY="$2"; shift ;;
+        --tg_mode) TG_MODE="$2"; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
     shift
@@ -39,7 +41,7 @@ case $EXP_TYPE in
         --backbone resnet50 \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
-        --pool_class 'SpatialSoftmax' --use_data_aug \
+        --pool_class SpatialSoftmax --use_data_aug \
         --num_steps 75000 --eval_every 75001 --validate_every 250 --save_every 30000 \
         --use_wandb \
         --wandb_name DroidDiffusion_${EXP_TYPE}camlrt_${TASK_NAME}_lr1e4_batch48_chunk16"
@@ -57,7 +59,7 @@ case $EXP_TYPE in
         --backbone resnet50 \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
-        --pool_class 'SpatialSoftmax' --use_data_aug \
+        --pool_class SpatialSoftmax --use_data_aug \
         --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
         --wandb_name DroidDiffusion_${EXP_TYPE}_camlrt_${TASK_NAME}_lr1e4_batch48_chunk16"
@@ -75,7 +77,7 @@ case $EXP_TYPE in
         --backbone resnet50 \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
-        --pool_class 'SpatialSoftmax' --use_data_aug \
+        --pool_class SpatialSoftmax --use_data_aug \
         --num_steps 75000 --eval_every 75001 --validate_every 250 --save_every 30000 \
         --use_wandb \
         --wandb_name DroidDiffusion_${EXP_TYPE}_camlrt_${TASK_NAME}_lr1e4_batch48_chunk16"
@@ -93,7 +95,7 @@ case $EXP_TYPE in
         --backbone resnet50 \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
-        --pool_class 'SpatialSoftmax' --use_data_aug \
+        --pool_class SpatialSoftmax --use_data_aug \
         --num_steps 75000 --eval_every 75001 --validate_every 250 --save_every 30000 \
         --use_wandb \
         --wandb_name DroidDiffusion_${EXP_TYPE}_camlrt_${TASK_NAME}_lr1e4_batch48_chunk16"
@@ -111,7 +113,7 @@ case $EXP_TYPE in
         --backbone resnet50 \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
-        --pool_class 'SpatialSoftmax' --use_data_aug \
+        --pool_class SpatialSoftmax --use_data_aug \
         --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
         --wandb_name DroidDiffusion_${EXP_TYPE}_camlrt_${TASK_NAME}_lr1e4_batch48_chunk16"
@@ -120,7 +122,7 @@ case $EXP_TYPE in
         CMD="python3 train_algo.py \
         --task_name place_button \
         --camera_names camera_top \
-        --ckpt_dir ./ckpt_dir/DroidDiffusion_camt/${DAY}/table/${EXP_TYPE}_${TASK_NAME}_lr1e4_batch48_chunk16 \
+        --ckpt_dir ./ckpt_dir/DroidDiffusion_camt/${DAY}/table/${EXP_TYPE}_${TG_MODE}_${TASK_NAME}_lr1e4_batch48_chunk16 \
         --exp_type $EXP_TYPE \
         --agent_class DroidDiffusion \
         --batch_size_train 48 --batch_size_val 48 \
@@ -129,10 +131,11 @@ case $EXP_TYPE in
         --backbone resnet50 \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
-        --pool_class 'SpatialSoftmax' --use_data_aug \
+        --tg_mode $TG_MODE \
+        --pool_class SpatialSoftmax --use_data_aug \
         --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
-        --wandb_name DroidDiffusion_${EXP_TYPE}_camlrt_${TASK_NAME}_lr1e4_batch48_chunk16"
+        --wandb_name DroidDiffusion_${EXP_TYPE}_${TG_MODE}_camlrt_${TASK_NAME}_lr1e4_batch48_chunk16"
         ;;
     *)
         echo "Invalid TYPE: $TYPE"
