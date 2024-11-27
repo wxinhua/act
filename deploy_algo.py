@@ -71,6 +71,18 @@ class InferVLAIL():
         with open(cfg_path, 'r', encoding='utf-8') as fin:
             self.config = yaml.load(fin, Loader=yaml.SafeLoader)
         self.config['robot_infor']['camera_names'] = self.args['camera_names']
+        if self.args['exp_type'] == 'tiangong_1rgb':
+            # default is mode1
+            if self.args['tg_mode'] == 'mode2':
+                self.config['agent_config']['state_dim'] = 26
+                self.config['agent_config']['action_dim'] = 18
+            elif self.args['tg_mode'] == 'mode3':
+                self.config['agent_config']['state_dim'] = 18
+                self.config['agent_config']['action_dim'] = 18
+            elif self.args['tg_mode'] == 'mode4':
+                self.config['agent_config']['state_dim'] = 14
+                self.config['agent_config']['action_dim'] = 14
+
         if self.args['use_depth_image']:
             self.config['robot_infor']['camera_sensors'] = ['rgb_images', 'depth_images']
         else:
@@ -166,14 +178,14 @@ class InferVLAIL():
         self.resize_images = True
         for cam_name in self.args['camera_names']:
             if self.exp_type == 'tiangong_1rgb':
-                curr_image = obs[cam_name][-1]
+                curr_image = obs[cam_name]
             else:
                 # for franka_3rgb, ur_1rgb
                 curr_image = obs['images'][cam_name]
             print(f'{cam_name} curr_image:',curr_image.shape)
             # rgb_image_encode = cv2.imencode(".jpg", curr_image)[1]
             rgb_image_encode = curr_image
-            curr_image = cv2.imdecode(rgb_image_encode, cv2.IMREAD_COLOR)
+            # curr_image = cv2.imdecode(rgb_image_encode, cv2.IMREAD_COLOR)
 
             # if cam_name == 'top':
             if self.resize_images:
@@ -217,7 +229,10 @@ class InferVLAIL():
             left_arm_jpos = joint_states['left_arm_jpos']
             # np [7]
             right_arm_jpos = joint_states['right_arm_jpos']
-            qpos = np.concat([left_arm_jpos, right_arm_jpos])
+            print(f"left_arm_jpos: {left_arm_jpos.shape}")
+            print(f"right_arm_jpos: {right_arm_jpos.shape}")
+            qpos = np.concatenate([left_arm_jpos, right_arm_jpos])
+            print(f"qpos: {qpos.shape}")
         else:
             # for franka_3rgb, ur_1rgb
             qpos = obs['qpos']
@@ -232,6 +247,8 @@ class InferVLAIL():
         input_depth = None
         # input_qpos: (8,)
         # input_image: (3, 480, 640, 3)
+        # tiangong mode4: input_qpos: (14,)
+        # tiangong mode4: input_image: (1, 480, 640, 3)
         print(f"input_qpos: {input_qpos.shape}")
         print(f"input_image: {input_image.shape}")
         # print(f"input_depth: {input_depth.shape}")
@@ -279,9 +296,10 @@ class InferVLAIL():
             from robot_env.ur_env import robot_env
         elif self.exp_type == 'tiangong_1rgb':
             sys.path.append('/home/ps/code_lei/inrocs')
-            os.environ["ROS_MASTER_URI"] = "http://192.168.41.1:11311"
+            # os.environ["ROS_MASTER_URI"] = "http://192.168.41.1:11311"
+            os.environ["ROS_MASTER_URI"] = "http://192.168.41.13:11311"
             os.environ["ROS_IP"] = "192.168.41.55"
-            from robot_env.tiangong_env_5hz import  TiangongEnv
+            from robot_env.tiangong_env_5hz_wk import  TiangongEnv
             robot_env = TiangongEnv(
                 camera_topic="/camera/color/image_raw",
                 left_arm_ctrl_topic="/human_arm_ctrl_left",
@@ -293,6 +311,8 @@ class InferVLAIL():
             )
 
         # warm up
+        import time
+        time.sleep(2)
         obs = robot_env.get_obs()
         print('***obs***:', obs)
 
@@ -383,7 +403,11 @@ class InferVLAIL():
                 raw_action = raw_action.squeeze(0).cpu().numpy()
                 action_pred = self.action_post_process(raw_action, self.dataset_stats)
                 print(f"action_pred size: {action_pred.shape}")
-                obs = robot_env.step(action_pred)
+                if self.exp_type == 'tiangong_1rgb':
+                    robot_env.act(action_pred)
+                    obs = robot_env.get_obs()
+                else:
+                    obs = robot_env.step(action_pred)
 
 def get_arguments():
     parser = argparse.ArgumentParser()
@@ -450,6 +474,12 @@ def get_arguments():
     parser.add_argument('--pos_lookahead_step', action='store', type=int, help='pos_lookahead_step', default=0, required=False)
 
     parser.add_argument('--raw_lang', type=str, default='null')
+
+    # mode1: input 26, output 26; 
+    # mode2: input 26, output 14+2=16: Index Finger食指, Thumb拇指->average
+    # mode3: input 14+2=16, output 14+2=16: Index Finger食指, Thumb拇指->average
+    # mode4: input 14, output 14: only contron arm
+    parser.add_argument('--tg_mode', type=str, default='mode1')
 
     args = parser.parse_args()
     return args

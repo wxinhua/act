@@ -26,4 +26,5 @@ python3 deploy_algo.py \
         --kl_weight 10 \
         --backbone 'resnet18' \
         --act_norm_class norm2 \
+        --tg_mode mode4 \
         --temporal_agg --num_steps 0 \
