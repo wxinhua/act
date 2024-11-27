@@ -2,7 +2,7 @@ import sys
 import os
 
 # example: python ./train_baidu_simple.py 1～89
-
+# tiangong: 60~89
 cmds = [
     "bash ./train_baidu.sh --task_name place_in_bread_on_plate_1 --exp_type franka_3rgb --day 241124",
     "bash ./train_baidu.sh --task_name place_in_bread_on_plate_2 --exp_type franka_3rgb --day 241124",
