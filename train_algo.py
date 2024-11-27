@@ -571,6 +571,7 @@ if __name__ == "__main__":
     # mode1: input 26, output 26; 
     # mode2: input 26, output 14+2=16: Index Finger食指, Thumb拇指->average
     # mode3: input 14+2=16, output 14+2=16: Index Finger食指, Thumb拇指->average
+    # mode4: input 14, output 14: only contron arm
     parser.add_argument('--tg_mode', type=str, default='mode1')
 
 
