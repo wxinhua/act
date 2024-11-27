@@ -90,6 +90,9 @@ cmds = [
     "bash ./train_baidu_droiddp.sh --task_name throw_battery --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
     "bash ./train_baidu_droiddp.sh --task_name throw_battery --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
     "bash ./train_baidu_droiddp.sh --task_name throw_battery --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu_droiddp.sh --task_name tiangong_data_1122_test --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu_droiddp.sh --task_name tiangong_data_1122_test --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu_droiddp.sh --task_name tiangong_data_1122_test --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
 ]
 
 def execute_command(cmd_id):
