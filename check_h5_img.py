@@ -207,13 +207,19 @@ def load_h5_and_save_images(source_folder, dest_folder):
     # robot_infor = {'camera_names': ['camera_top'],
     #                'camera_sensors': ['rgb_images', 'depth_images'],
     #                'arms': ['master', 'puppet'],
-    #                'controls': ['joint_position']}
+    #                'controls': ['joint_position', 'end_effector']}
 
     # simulation_4rgb
-    robot_infor = {'camera_names': ['camera_front_external', 'camera_handeye', 'camera_left_external', 'camera_right_external'],
-                   'camera_sensors': ['rgb_images', 'depth_images'],
-                   'arms': ['franka'],
-                   'controls': ['joint_position']}
+    # robot_infor = {'camera_names': ['camera_front_external', 'camera_handeye', 'camera_left_external', 'camera_right_external'],
+    #                'camera_sensors': ['rgb_images', 'depth_images'],
+    #                'arms': ['franka'],
+    #                'controls': ['joint_position']}
+
+    # new tiangong_1rgb
+    robot_infor = {'camera_names': ['camera_top'],
+                   'camera_sensors': ['rgb_images'],
+                   'arms': ['master', 'puppet'],
+                   'controls': ['joint_position', 'end_effector']}
     
     # Create the destination folder if it doesn't exist
     Path(dest_folder).mkdir(parents=True, exist_ok=True)
@@ -300,8 +306,12 @@ if __name__ == "__main__":
     # dest_folder = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/h5_tiangong_1rgb_img/push_break_pick_shelf_insert_machine_press_switch_place_plate'
 
     # ######### simulation 1RGB
-    source_folder = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/h5_simulation_4rgb/pick_and_place_06' 
-    dest_folder = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/h5_simulation_4rgb_img/pick_and_place_06'
+    # source_folder = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/h5_simulation_4rgb/pick_and_place_06' 
+    # dest_folder = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/h5_simulation_4rgb_img/pick_and_place_06'
+
+    ######### new tiangong 1122 /media/data/h5_tiangong_1rgb/tiangong_data_1122_test
+    source_folder = '/media/data/h5_tiangong_1rgb/tiangong_data_1122_test' 
+    dest_folder = '/media/data/h5_tiangong_1rgb_img/tiangong_data_1122_test'
 
     load_h5_and_save_images(source_folder, dest_folder)
 

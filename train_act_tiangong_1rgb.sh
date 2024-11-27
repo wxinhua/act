@@ -47,11 +47,12 @@ export TORCH_HOME=/media/users/wk/torch_model
 
 ############ for benchmark!
 # --num_steps 100000 --eval_every 100001 --validate_every 500 --save_every 50000 \
+# --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
 
 CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --task_name place_button \
         --camera_names camera_top \
-        --ckpt_dir ./ckpt_dir/ACT_camt/241121/table/tiangong_1rgb_place_button_lr1e5_batch24_chunk50 \
+        --ckpt_dir ./ckpt_dir/ACT_camt/241121/table/tiangong_1rgb_mode3_place_button_lr1e5_batch24_chunk50 \
         --exp_type tiangong_1rgb \
         --agent_class ACT \
         --batch_size_train 48 --batch_size_val 48 \
@@ -60,9 +61,10 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --backbone 'resnet18' \
         --act_norm_class norm2 \
         --lr_scheduler CosineLR \
+        --tg_mode mode3 \
         --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
-        --wandb_name ACT_tiangong_1rgb_camlrt_place_button_lr1e5_batch24_chunk50 \
+        --wandb_name ACT_tiangong_1rgb_mode3_camlrt_place_button_lr1e5_batch24_chunk50 \
 
 
 

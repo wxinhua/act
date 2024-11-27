@@ -1,7 +1,7 @@
 import sys
 import os
 
-# example: python ./train_baidu_simple.py 1～68
+# example: python ./train_baidu_simple.py 1～89
 
 cmds = [
     "bash ./train_baidu.sh --task_name place_in_bread_on_plate_1 --exp_type franka_3rgb --day 241124",
@@ -63,15 +63,36 @@ cmds = [
     "bash ./train_baidu.sh --task_name close_trash_can --exp_type ur_1rgb --day 241124",
     "bash ./train_baidu.sh --task_name pick_up_round_bread --exp_type ur_1rgb --day 241124",
     "bash ./train_baidu.sh --task_name pick_up_long_bread --exp_type ur_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name place_button --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name gear_place --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name nut_place --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name cylinder_pick_box_place_close --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name tool_liftn_box_place --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name plug_pullout_then_press --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name wipe_panel --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name throw_battery_twice --exp_type tiangong_1rgb --day 241124",
-    "bash ./train_baidu.sh --task_name throw_battery --exp_type tiangong_1rgb --day 241124",
+    "bash ./train_baidu.sh --task_name place_button --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name place_button --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name place_button --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name gear_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name gear_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name gear_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name nut_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name nut_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name nut_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name cylinder_pick_box_place_close --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name cylinder_pick_box_place_close --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name cylinder_pick_box_place_close --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name tool_liftn_box_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name tool_liftn_box_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name tool_liftn_box_place --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name plug_pullout_then_press --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name plug_pullout_then_press --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name plug_pullout_then_press --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name wipe_panel --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name wipe_panel --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name wipe_panel --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name throw_battery_twice --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name throw_battery_twice --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name throw_battery_twice --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name throw_battery --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name throw_battery --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name throw_battery --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
+    "bash ./train_baidu.sh --task_name tiangong_data_1122_test --exp_type tiangong_1rgb --day 241127 --tg_mode mode1",
+    "bash ./train_baidu.sh --task_name tiangong_data_1122_test --exp_type tiangong_1rgb --day 241127 --tg_mode mode2",
+    "bash ./train_baidu.sh --task_name tiangong_data_1122_test --exp_type tiangong_1rgb --day 241127 --tg_mode mode3",
 ]
 
 def execute_command(cmd_id):

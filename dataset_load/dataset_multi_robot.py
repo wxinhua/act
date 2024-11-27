@@ -29,7 +29,7 @@ def print_memory_info(process, idx):
     print(f"{idx}. used_MB: {used_MB}")
 
 class EpisodicDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset_path_list, robot_infor, norm_stats, episode_ids, episode_len, chunk_size, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, use_depth_image=False, exp_type='franka_3rgb'):
+    def __init__(self, dataset_path_list, robot_infor, norm_stats, episode_ids, episode_len, chunk_size, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, use_depth_image=False, exp_type='franka_3rgb', tg_mode='mode1'):
         super(EpisodicDataset).__init__()
         self.episode_ids = episode_ids
         self.dataset_path_list = dataset_path_list
@@ -42,8 +42,9 @@ class EpisodicDataset(torch.utils.data.Dataset):
         self.max_depth = 1.25
         self.robot_infor = robot_infor
         self.exp_type = exp_type
+        self.tg_mode = tg_mode
 
-        if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'tiangong_1rgb']:
+        if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb']:
             self.qpos_arm_key = 'puppet'
             self.action_arm_key = 'puppet'
             self.ctl_elem_key = 'joint_position'
@@ -55,6 +56,10 @@ class EpisodicDataset(torch.utils.data.Dataset):
             self.qpos_arm_key = 'franka'
             self.action_arm_key = 'franka'
             self.ctl_elem_key = 'joint_position'
+        elif exp_type in ['tiangong_1rgb']:
+            self.qpos_arm_key = 'puppet'
+            self.action_arm_key = 'puppet'
+            self.ctl_elem_key = ['end_effector', 'joint_position']
 
         self.read_h5files = ReadH5Files(self.robot_infor)
 
@@ -137,8 +142,36 @@ class EpisodicDataset(torch.utils.data.Dataset):
             qpos_list = []
             action_list = []
             for ele in self.ctl_elem_key:
-                cur_qpos = control_dict[self.qpos_arm_key][ele][:]
-                cur_action = control_dict[self.action_arm_key][ele][:]
+                if self.exp_type in ['tiangong_1rgb'] and ele == 'end_effector':
+                    # print(f"tg_mode: {self.tg_mode}")
+                    if self.tg_mode == 'mode1':
+                        cur_qpos = control_dict[self.qpos_arm_key][ele][:]
+                        cur_action = control_dict[self.action_arm_key][ele][:]
+                    elif self.tg_mode == 'mode2':
+                        cur_qpos = control_dict[self.qpos_arm_key][ele][:]
+                        cur_left_action = control_dict[self.action_arm_key][ele][:, [3,4]]
+                        cur_right_action = control_dict[self.action_arm_key][ele][:, [9,10]]
+                        # print(f"cur_qpos: {cur_qpos[1]}")
+                        # print(f"cur_left_action: {cur_left_action[1]}")
+                        # print(f"cur_right_action: {cur_right_action[1]}")
+                        cur_action = np.concatenate((cur_left_action, cur_right_action), axis=1)
+                        # print(f"cur_action: {cur_action[1]}")
+                    elif self.tg_mode == 'mode3':
+                        cur_left_qpos = control_dict[self.qpos_arm_key][ele][:, [3,4]]
+                        cur_right_qpos = control_dict[self.qpos_arm_key][ele][:, [9,10]]
+                        cur_left_action = control_dict[self.action_arm_key][ele][:, [3,4]]
+                        cur_right_action = control_dict[self.action_arm_key][ele][:, [9,10]]
+                        # print(f"cur_left_qpos: {cur_left_qpos[1]}")
+                        # print(f"cur_right_qpos: {cur_right_qpos[1]}")
+                        # print(f"cur_left_action: {cur_left_action[1]}")
+                        # print(f"cur_right_action: {cur_right_action[1]}")
+                        cur_qpos = np.concatenate((cur_left_qpos, cur_right_qpos), axis=1)
+                        cur_action = np.concatenate((cur_left_action, cur_right_action), axis=1)
+                        # print(f"cur_qpos: {cur_qpos[1]}")
+                        # print(f"cur_action: {cur_action[1]}")
+                else:
+                    cur_qpos = control_dict[self.qpos_arm_key][ele][:]
+                    cur_action = control_dict[self.action_arm_key][ele][:]
                 qpos_list.append(cur_qpos)
                 action_list.append(cur_action)
             qpos = np.concatenate(qpos_list, axis=-1)
@@ -255,7 +288,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
             # normalize to mean 0 std 1
             action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
         
-        qpos_data = (qpos_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
+        qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
 
         # lang_embed = control_dict['language_distilbert']
         lang_embed = torch.zeros(1)
@@ -296,7 +329,7 @@ def get_files(dataset_dir, robot_infor):
             print(e)
     return files
 
-def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, exp_type):
+def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, exp_type, tg_mode):
     read_h5files = ReadH5Files(robot_infor)
 
     all_qpos_data = []
@@ -304,7 +337,7 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
     val_episode_len = []
     train_episode_len = []
 
-    if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'tiangong_1rgb']:
+    if exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb']:
         qpos_arm_key = 'puppet'
         action_arm_key = 'puppet'
         ctl_elem_key = 'joint_position'
@@ -316,6 +349,10 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
         qpos_arm_key = 'franka'
         action_arm_key = 'franka'
         ctl_elem_key = 'joint_position'
+    elif exp_type in ['tiangong_1rgb']:
+        qpos_arm_key = 'puppet'
+        action_arm_key = 'puppet'
+        ctl_elem_key = ['end_effector', 'joint_position']
 
     for list_id, cur_dataset_path_list in enumerate([train_dataset_path_list, val_dataset_path_list]):
         cur_episode_len = []
@@ -327,8 +364,37 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
                     qpos_list = []
                     action_list = []
                     for ele in ctl_elem_key:
-                        cur_qpos = control_dict[qpos_arm_key][ele][:]
-                        cur_action = control_dict[action_arm_key][ele][:]
+                        if exp_type in ['tiangong_1rgb'] and ele == 'end_effector':
+                            print(f"tg_mode: {tg_mode}")
+                            if tg_mode == 'mode1':
+                                cur_qpos = control_dict[qpos_arm_key][ele][:]
+                                cur_action = control_dict[action_arm_key][ele][:]
+                            elif tg_mode == 'mode2':
+                                cur_qpos = control_dict[qpos_arm_key][ele][:]
+                                cur_left_action = control_dict[action_arm_key][ele][:, [3,4]]
+                                cur_right_action = control_dict[action_arm_key][ele][:, [9,10]]
+                                # print(f"cur_qpos: {cur_qpos[1]}")
+                                # print(f"cur_left_action: {cur_left_action[1]}")
+                                # print(f"cur_right_action: {cur_right_action[1]}")
+                                cur_action = np.concatenate((cur_left_action, cur_right_action), axis=1)
+                                # print(f"cur_action: {cur_action[1]}")
+
+                            elif tg_mode == 'mode3':
+                                cur_left_qpos = control_dict[qpos_arm_key][ele][:, [3,4]]
+                                cur_right_qpos = control_dict[qpos_arm_key][ele][:, [9,10]]
+                                cur_left_action = control_dict[action_arm_key][ele][:, [3,4]]
+                                cur_right_action = control_dict[action_arm_key][ele][:, [9,10]]
+                                # print(f"cur_left_qpos: {cur_left_qpos[1]}")
+                                # print(f"cur_right_qpos: {cur_right_qpos[1]}")
+                                # print(f"cur_left_action: {cur_left_action[1]}")
+                                # print(f"cur_right_action: {cur_right_action[1]}")
+                                cur_qpos = np.concatenate((cur_left_qpos, cur_right_qpos), axis=1)
+                                cur_action = np.concatenate((cur_left_action, cur_right_action), axis=1)
+                                # print(f"cur_qpos: {cur_qpos[1]}")
+                                # print(f"cur_action: {cur_action[1]}")
+                        else:
+                            cur_qpos = control_dict[qpos_arm_key][ele][:]
+                            cur_action = control_dict[action_arm_key][ele][:]
                         qpos_list.append(cur_qpos)
                         action_list.append(cur_action)
                     qpos = np.concatenate(qpos_list, axis=-1)
@@ -429,7 +495,7 @@ class DistributedBatchSampler(torch.utils.data.Sampler):
         return len(self.dist_sampler) // self.batch_size
     
 
-def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chunk_size, use_depth_image=False, sample_weights=None, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, name_filter=None, exp_type='franka_3rgb', logger=None):
+def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chunk_size, use_depth_image=False, sample_weights=None, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, name_filter=None, exp_type='franka_3rgb', logger=None, tg_mode='mode1'):
     if type(dataset_dir_l) == str:
         dataset_dir_l = [dataset_dir_l]
 
@@ -513,7 +579,7 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
         # print(f'\n\nData from: {dataset_dir_l}\n- Train on {[len(x) for x in train_episode_ids_l]} episodes\n- Test on {[len(x) for x in val_episode_ids_l]} episodes\n\n')
         logger.info(f'\n\nData from: {dataset_dir_l}\n- Train on {[len(x) for x in train_episode_ids_l]} episodes\n- Test on {[len(x) for x in val_episode_ids_l]} episodes\n\n')
     
-    norm_stats, train_episode_len, val_episode_len = get_norm_stats(train_dataset_path_fla_list, val_dataset_path_fla_list, robot_infor, exp_type)
+    norm_stats, train_episode_len, val_episode_len = get_norm_stats(train_dataset_path_fla_list, val_dataset_path_fla_list, robot_infor, exp_type, tg_mode)
     if rank == 0 or rank is None:
         # print(f"norm_stats: {norm_stats}")
         # all_episode_len: list []
@@ -560,8 +626,8 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
         batch_sampler_val = BatchSampler(batch_size_val, val_episode_len_l, None)
 
         # construct dataset and dataloader
-        train_dataset = EpisodicDataset(train_dataset_path_fla_list, robot_infor, norm_stats, train_episode_ids, train_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image, exp_type=exp_type)
-        val_dataset = EpisodicDataset(val_dataset_path_fla_list, robot_infor, norm_stats, val_episode_ids, val_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image, exp_type=exp_type)
+        train_dataset = EpisodicDataset(train_dataset_path_fla_list, robot_infor, norm_stats, train_episode_ids, train_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image, exp_type=exp_type, tg_mode=tg_mode)
+        val_dataset = EpisodicDataset(val_dataset_path_fla_list, robot_infor, norm_stats, val_episode_ids, val_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image, exp_type=exp_type, tg_mode=tg_mode)
 
         # train_num_workers = 0
         train_num_workers = 12 #4 #4 #16
