@@ -16,6 +16,7 @@ export TORCH_HOME=/media/users/wk/torch_model
 # place_button
 
 # --batch_size_train 24 --batch_size_val 24 \
+# --num_steps 20 --eval_every 21 --validate_every 10 --save_every 20 \
 CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --task_name place_button \
         --camera_names camera_top \
@@ -29,7 +30,7 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
         --pool_class 'SpatialSoftmax' --use_data_aug \
-        --num_steps 20 --eval_every 21 --validate_every 10 --save_every 20 \
+        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
         --wandb_name DroidDiffusion_tiangong_1rgb_camt_place_button_lr1e5_batch24_chunk16 \
 

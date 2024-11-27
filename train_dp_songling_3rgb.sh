@@ -21,14 +21,14 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --ckpt_dir ./ckpt_dir/DroidDiffusion_camlrt/241112/table/songling_3rgb_28_packtable_2_lr1e5_batch24_chunk16 \
         --exp_type songling_3rgb \
         --agent_class DroidDiffusion \
-        --batch_size_train 48 --batch_size_val 48 \
+        --batch_size_train 32 --batch_size_val 32 \
         --chunk_size 16 --hidden_dim 512 --dim_feedforward 3200 \
         --lr 1e-4 --lr_backbone 1e-4 \
         --backbone 'resnet50' \
         --act_norm_class norm1 \
         --lr_scheduler CosineLR \
         --pool_class 'SpatialSoftmax' --use_data_aug \
-        --num_steps 20 --eval_every 21 --validate_every 10 --save_every 20 \
+        --num_steps 75000 --eval_every 75001 --validate_every 250 --save_every 30000 \
         --use_wandb \
         --wandb_name DroidDiffusion_songling_3rgb_camlrt_28_packtable_2_lr1e5_batch24_chunk16 \
 
