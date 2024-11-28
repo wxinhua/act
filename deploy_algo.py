@@ -185,7 +185,10 @@ class InferVLAIL():
             print(f'{cam_name} curr_image:',curr_image.shape)
             # rgb_image_encode = cv2.imencode(".jpg", curr_image)[1]
             rgb_image_encode = curr_image
-            # curr_image = cv2.imdecode(rgb_image_encode, cv2.IMREAD_COLOR)
+            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
+                curr_image = cv2.imdecode(rgb_image_encode, cv2.IMREAD_COLOR)
+            else:
+                curr_image = rgb_image_encode
 
             # if cam_name == 'top':
             if self.resize_images:
