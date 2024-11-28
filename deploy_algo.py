@@ -309,6 +309,20 @@ class InferVLAIL():
                 left_hand_topic="/inspire_hand/ctrl/left_hand",
                 right_hand_topic="/inspire_hand/ctrl/right_hand"
             )
+        # elif self.exp_type == 'songling_3rgb':
+        #     from ros_set import RosOperator
+
+        #     ros_set_path = os.path.join('.', 'ros_set_config.yaml')
+
+        #     with open(ros_set_path, 'r', encoding='utf-8') as fin:
+        #         self.ros_set_config = yaml.load(fin, Loader=yaml.SafeLoader)
+            
+        #     self.ros_set_config['use_depth_image'] = False
+        #     self.ros_set_config['use_robot_base'] = False
+        #     print('self.ros_set_config:',self.ros_set_config)
+        #     self.ros_operator = RosOperator(argparse.Namespace(**self.ros_set_config))
+
+
 
         # warm up
         import time
