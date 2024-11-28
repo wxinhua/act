@@ -138,7 +138,7 @@ class InferVLAIL():
 
     def action_post_process(self, action, stats):
         act_norm_class = self.args['act_norm_class']
-        print(f'act_norm_class: {act_norm_class}')
+        # print(f'act_norm_class: {act_norm_class}')
         if act_norm_class == 'norm1':
             action = ((action + 1) / 2) * (stats['action_max'] - stats['action_min']) + stats['action_min']
         elif act_norm_class == 'norm2':
@@ -181,7 +181,7 @@ class InferVLAIL():
         self.resize_images = True
         for cam_name in self.args['camera_names']:
             if self.exp_type == 'tiangong_1rgb':
-                curr_image = obs[cam_name]
+                curr_image = obs['images'][cam_name]
             else:
                 # for franka_3rgb, ur_1rgb
                 curr_image = obs['images'][cam_name]
@@ -203,7 +203,8 @@ class InferVLAIL():
                 # print('2 curr_image:',curr_image.shape)
 
             if show_img:
-                cv2.imshow(f"{cam_name} image", curr_image)
+                rgb_image = curr_image[:, :, ::-1]
+                cv2.imshow(f"{cam_name} image", rgb_image)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
@@ -299,17 +300,18 @@ class InferVLAIL():
         # mode3: input 14+4=18, output 14+4=18: Index Finger食指, Thumb拇指
         # mode4: input 14, output 14: only contron arm
         # action should be: [self.left_jpos, self.left_hand, self.right_jpos, self.right_hand]
+        # all_actions: [b, t, dim]
         if self.args['tg_mode'] == 'mode1':
-            left_hand_jpos = all_actions[:, :6]
-            right_hand_jpos = all_actions[:, 6:12]
-            left_jpos = all_actions[:, 12:19]
-            right_jpos = all_actions[:, 19:26]
-            all_actions = np.concatenate((left_jpos, left_hand, right_jpos, right_hand), axis=1)
+            left_hand_jpos = all_actions[:, :, :6]
+            right_hand_jpos = all_actions[:, :, 6:12]
+            left_jpos = all_actions[:, :, 12:19]
+            right_jpos = all_actions[:, :, 19:26]
+            all_actions = np.concatenate((left_jpos, left_hand_jpos, right_jpos, right_hand_jpos), axis=-1)
         elif self.args['tg_mode'] in ['mode2', 'mode3']:
-            left_finger_jpos = all_actions[:, :2]
-            right_finger_jpos = all_actions[:, 2:4]
-            left_jpos = all_actions[:, 4:11]
-            right_jpos = all_actions[:, 11:18]
+            left_finger_jpos = all_actions[:, :, :2]
+            right_finger_jpos = all_actions[:, :, 2:4]
+            left_jpos = all_actions[:, :, 4:11]
+            right_jpos = all_actions[:, :, 11:18]
             left_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
             right_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
             for i in range(4):
@@ -319,15 +321,15 @@ class InferVLAIL():
             right_hand_jpos[4] = right_finger_jpos[1]
             left_hand_jpos = np.expand_dims(left_hand_jpos, axis=0)
             right_hand_jpos = np.expand_dims(right_hand_jpos, axis=0)
-            all_actions = np.concatenate((left_jpos, left_hand, right_jpos, right_hand), axis=1)
+            all_actions = np.concatenate((left_jpos, left_hand_jpos, right_jpos, right_hand_jpos), axis=-1)
         elif self.args['tg_mode'] == 'mode4':
             left_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
             right_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
-            left_jpos = all_actions[:, :7]
-            right_jpos = all_actions[:, 7:14]
+            left_jpos = all_actions[:, :, :7]
+            right_jpos = all_actions[:, :, 7:14]
             left_hand_jpos = np.expand_dims(left_hand_jpos, axis=0)
             right_hand_jpos = np.expand_dims(right_hand_jpos, axis=0)
-            all_actions = np.concatenate((left_jpos, left_hand, right_jpos, right_hand), axis=1)
+            all_actions = np.concatenate((left_jpos, left_hand_jpos, right_jpos, right_hand_jpos), axis=-1)
         
         return all_actions
 
@@ -372,7 +374,7 @@ class InferVLAIL():
 
             # # tianyi_env.reset_to_home()
 
-            # tianyi_env.reset_to_parepre()
+            robot_env.reset_to_parepre()
 
         # warm up
         import time
@@ -414,7 +416,7 @@ class InferVLAIL():
 
         if temporal_agg:
             # all_time_actions = np.zeros([max_timesteps, max_timesteps + chunk_size, action_dim])
-            all_time_actions = np.zeros([max_timesteps, max_timesteps+chunk_size, action_dim]).cuda()
+            all_time_actions = np.zeros([max_timesteps, max_timesteps+chunk_size, action_dim])
             query_frequency = 1
         else:
             query_frequency = chunk_size
@@ -429,14 +431,15 @@ class InferVLAIL():
                     if t % query_frequency == 0:
                         all_actions = self.agent(qpos_data, image_data, input_depth, language_distilbert=self.encoded_lang)
                         all_actions = all_actions.cpu().numpy()
+                        # print(f"1 all_actions: {all_actions.shape}")
 
                         if self.exp_type == 'tiangong_1rgb':
                             all_actions = self.process_tiangong_action(all_actions)
                     
                     if temporal_agg:
                         infer_chunk = chunk_size
-                        print(f"all_actions: {all_actions.shape}")
-                        print(f"all_time_actions: {all_time_actions.shape}")
+                        # print(f"all_actions: {all_actions.shape}")
+                        # print(f"all_time_actions: {all_time_actions.shape}")
                         print(f"t: {t}, chunk_size:{chunk_size}")
                         # all_time_actions[[t], t:t+chunk_size] = all_actions
                         all_time_actions[[t], t:t+infer_chunk] = all_actions[:,:infer_chunk]
@@ -449,7 +452,7 @@ class InferVLAIL():
                         exp_weights = exp_weights / exp_weights.sum()
                         # exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
                         exp_weights = exp_weights[:, np.newaxis]
-                        raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+                        raw_action = (actions_for_curr_step * exp_weights).sum(axis=0, keepdims=True)
                     else:
                         raw_action = all_actions[:, t % query_frequency]
                 elif self.args['agent_class'] == 'DroidDiffusion':                   
@@ -478,7 +481,7 @@ class InferVLAIL():
                         exp_weights = exp_weights / exp_weights.sum()
                         # exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
                         exp_weights = exp_weights[:, np.newaxis]
-                        raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+                        raw_action = (actions_for_curr_step * exp_weights).sum(axis=0, keepdims=True)
                     else:
                         raw_action = all_actions[:, t % query_frequency]
                         print(f"t: {t}, raw_action: {raw_action.shape}")

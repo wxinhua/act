@@ -142,6 +142,8 @@ class EpisodicDataset(torch.utils.data.Dataset):
             qpos_list = []
             action_list = []
             for ele in self.ctl_elem_key:
+                # 12, 14
+                # ['end_effector', 'joint_position']
                 if self.exp_type in ['tiangong_1rgb'] and ele == 'end_effector':
                     # print(f"tg_mode: {self.tg_mode}")
                     if self.tg_mode == 'mode1':
