@@ -133,12 +133,18 @@ class VLAIL:
         self.config['robot_infor']['camera_names'] = self.args['camera_names']
         if self.args['exp_type'] == 'tiangong_1rgb':
             # default is mode1
-            if self.args['tg_mode'] == 'mode2':
+            if self.args['tg_mode'] == 'mode1':
+                self.config['agent_config']['state_dim'] = 26
+                self.config['agent_config']['action_dim'] = 26
+            elif self.args['tg_mode'] == 'mode2':
                 self.config['agent_config']['state_dim'] = 26
                 self.config['agent_config']['action_dim'] = 18
             elif self.args['tg_mode'] == 'mode3':
                 self.config['agent_config']['state_dim'] = 18
                 self.config['agent_config']['action_dim'] = 18
+            elif self.args['tg_mode'] == 'mode4':
+                self.config['agent_config']['state_dim'] = 14
+                self.config['agent_config']['action_dim'] = 14
 
         if self.args['use_depth_image']:
             self.config['robot_infor']['camera_sensors'] = ['rgb_images', 'depth_images']
@@ -551,7 +557,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_lang', action='store_true')
     parser.add_argument('--input_state_acthead', action='store_true')
 
-    # for droid_diffusion, 
+    # for droid_diffusion
     parser.add_argument('--lr_backbone', default=1e-4, type=float, help='lr_backbone')
     parser.add_argument('--pool_class', type=str, default='null')
     parser.add_argument('--stsm_num_kp', type=int, default=512)
@@ -568,11 +574,10 @@ if __name__ == "__main__":
     parser.add_argument('--use_data_aug', action='store_true')
     parser.set_defaults(use_data_aug=False)
 
-    # mode1: input 26, output 26; 
-    # mode2: input 26, output 14+2=16: Index Finger食指, Thumb拇指->average
-    # mode3: input 14+2=16, output 14+2=16: Index Finger食指, Thumb拇指->average
+    # mode1: input 26, output 26;
+    # mode2: input 26, output 14+4=18: Index Finger食指, Thumb拇指
+    # mode3: input 14+4=18, output 14+4=18: Index Finger食指, Thumb拇指
     # mode4: input 14, output 14: only contron arm
     parser.add_argument('--tg_mode', type=str, default='mode1')
-
 
     main(vars(parser.parse_args()))

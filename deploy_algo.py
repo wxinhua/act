@@ -73,7 +73,10 @@ class InferVLAIL():
         self.config['robot_infor']['camera_names'] = self.args['camera_names']
         if self.args['exp_type'] == 'tiangong_1rgb':
             # default is mode1
-            if self.args['tg_mode'] == 'mode2':
+            if self.args['tg_mode'] == 'mode1':
+                self.config['agent_config']['state_dim'] = 26
+                self.config['agent_config']['action_dim'] = 26
+            elif self.args['tg_mode'] == 'mode2':
                 self.config['agent_config']['state_dim'] = 26
                 self.config['agent_config']['action_dim'] = 18
             elif self.args['tg_mode'] == 'mode3':
@@ -185,7 +188,7 @@ class InferVLAIL():
             print(f'{cam_name} curr_image:',curr_image.shape)
             # rgb_image_encode = cv2.imencode(".jpg", curr_image)[1]
             rgb_image_encode = curr_image
-            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
+            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb', 'tiangong_1rgb']:
                 curr_image = cv2.imdecode(rgb_image_encode, cv2.IMREAD_COLOR)
             else:
                 curr_image = rgb_image_encode
@@ -227,15 +230,24 @@ class InferVLAIL():
         # incros/incros/robot_env/franka_env.py
         # incros/incros/robot_env/ur_env.py
         if self.exp_type == 'tiangong_1rgb':
-            joint_states = obs['joint_states']
-            # np [7]
-            left_arm_jpos = joint_states['left_arm_jpos']
-            # np [7]
-            right_arm_jpos = joint_states['right_arm_jpos']
-            print(f"left_arm_jpos: {left_arm_jpos.shape}")
-            print(f"right_arm_jpos: {right_arm_jpos.shape}")
-            qpos = np.concatenate([left_arm_jpos, right_arm_jpos])
-            print(f"qpos: {qpos.shape}")
+            # [self.left_jpos, self.left_hand, self.right_jpos, self.right_hand]
+            qpos = obs['qpos']
+            left_jpos = qpos[:7]
+            left_hand_jpos = qpos[7:13]
+            right_jpos = qpos[13:20]
+            right_hand_jpos = qpos[20:26]
+            # mode1: input 26, output 26;
+            # mode2: input 26, output 14+4=18: Index Finger食指, Thumb拇指
+            # mode3: input 14+4=18, output 14+4=18: Index Finger食指, Thumb拇指
+            # mode4: input 14, output 14: only contron arm
+            if self.args['tg_mode'] == 'mode1':
+                qpos = np.concatenate((left_hand_jpos, right_hand_jpos, left_jpos, right_jpos))
+            elif self.args['tg_mode'] == 'mode2':
+                qpos = np.concatenate((left_hand_jpos, right_hand_jpos, left_jpos, right_jpos))
+            elif self.args['tg_mode'] == 'mode3':
+                qpos = np.concatenate((left_hand_jpos[[3,4]], right_hand_jpos[3:4], left_jpos, right_jpos))
+            elif self.args['tg_mode'] == 'mode4':
+                qpos = np.concatenate((left_jpos, right_jpos))
         else:
             # for franka_3rgb, ur_1rgb
             qpos = obs['qpos']
@@ -281,6 +293,44 @@ class InferVLAIL():
 
         return qpos_data, image_data, input_depth
         
+    def process_tiangong_action(self, all_actions):
+        # mode1: input 26, output 26;
+        # mode2: input 26, output 14+4=18: Index Finger食指, Thumb拇指
+        # mode3: input 14+4=18, output 14+4=18: Index Finger食指, Thumb拇指
+        # mode4: input 14, output 14: only contron arm
+        # action should be: [self.left_jpos, self.left_hand, self.right_jpos, self.right_hand]
+        if self.args['tg_mode'] == 'mode1':
+            left_hand_jpos = all_actions[:, :6]
+            right_hand_jpos = all_actions[:, 6:12]
+            left_jpos = all_actions[:, 12:19]
+            right_jpos = all_actions[:, 19:26]
+            all_actions = np.concatenate((left_jpos, left_hand, right_jpos, right_hand), axis=1)
+        elif self.args['tg_mode'] in ['mode2', 'mode3']:
+            left_finger_jpos = all_actions[:, :2]
+            right_finger_jpos = all_actions[:, 2:4]
+            left_jpos = all_actions[:, 4:11]
+            right_jpos = all_actions[:, 11:18]
+            left_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
+            right_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
+            for i in range(4):
+                left_hand_jpos[i] = left_finger_jpos[0]
+                right_hand_jpos[i] = right_finger_jpos[0]
+            left_hand_jpos[4] = left_finger_jpos[1]
+            right_hand_jpos[4] = right_finger_jpos[1]
+            left_hand_jpos = np.expand_dims(left_hand_jpos, axis=0)
+            right_hand_jpos = np.expand_dims(right_hand_jpos, axis=0)
+            all_actions = np.concatenate((left_jpos, left_hand, right_jpos, right_hand), axis=1)
+        elif self.args['tg_mode'] == 'mode4':
+            left_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
+            right_hand_jpos = np.array([0., 0., 0., 0., 0., 1.,])
+            left_jpos = all_actions[:, :7]
+            right_jpos = all_actions[:, 7:14]
+            left_hand_jpos = np.expand_dims(left_hand_jpos, axis=0)
+            right_hand_jpos = np.expand_dims(right_hand_jpos, axis=0)
+            all_actions = np.concatenate((left_jpos, left_hand, right_jpos, right_hand), axis=1)
+        
+        return all_actions
+
     def execute(self):
         ###
         listener_thread = threading.Thread(target=self.start_keyboard_listener, daemon=True)
@@ -298,39 +348,39 @@ class InferVLAIL():
             sys.path.append("/home/ps/work_sapce_hqr/inrocs")
             from robot_env.ur_env import robot_env
         elif self.exp_type == 'tiangong_1rgb':
-            sys.path.append('/home/ps/code_lei/inrocs')
-            # os.environ["ROS_MASTER_URI"] = "http://192.168.41.1:11311"
-            os.environ["ROS_MASTER_URI"] = "http://192.168.41.13:11311"
-            os.environ["ROS_IP"] = "192.168.41.55"
-            from robot_env.tiangong_env_5hz_wk import  TiangongEnv
-            robot_env = TiangongEnv(
-                camera_topic="/camera/color/image_raw",
-                left_arm_ctrl_topic="/human_arm_ctrl_left",
-                right_arm_ctrl_topic="/human_arm_ctrl_right",
-                left_arm_state_topic="/human_arm_state_left",
-                right_arm_state_topic="/human_arm_state_right",
-                left_hand_topic="/inspire_hand/ctrl/left_hand",
-                right_hand_topic="/inspire_hand/ctrl/right_hand"
-            )
-        # elif self.exp_type == 'songling_3rgb':
-        #     from ros_set import RosOperator
+            # sys.path.append('/home/ps/code_lei/inrocs')
+            # # os.environ["ROS_MASTER_URI"] = "http://192.168.41.1:11311"
+            # os.environ["ROS_MASTER_URI"] = "http://192.168.41.13:11311"
+            # os.environ["ROS_IP"] = "192.168.41.55"
+            # from robot_env.tiangong_env_5hz_wk import  TiangongEnv
+            # robot_env = TiangongEnv(
+            #     camera_topic="/camera/color/image_raw",
+            #     left_arm_ctrl_topic="/human_arm_ctrl_left",
+            #     right_arm_ctrl_topic="/human_arm_ctrl_right",
+            #     left_arm_state_topic="/human_arm_state_left",
+            #     right_arm_state_topic="/human_arm_state_right",
+            #     left_hand_topic="/inspire_hand/ctrl/left_hand",
+            #     right_hand_topic="/inspire_hand/ctrl/right_hand"
+            # )
+            from inrocs.robot_env.tianyi_env import tianyi_env as robot_env
+            # qpos = tianyi_env.get_obs_full()['qpos']
 
-        #     ros_set_path = os.path.join('.', 'ros_set_config.yaml')
+            # print(qpos)
 
-        #     with open(ros_set_path, 'r', encoding='utf-8') as fin:
-        #         self.ros_set_config = yaml.load(fin, Loader=yaml.SafeLoader)
-            
-        #     self.ros_set_config['use_depth_image'] = False
-        #     self.ros_set_config['use_robot_base'] = False
-        #     print('self.ros_set_config:',self.ros_set_config)
-        #     self.ros_operator = RosOperator(argparse.Namespace(**self.ros_set_config))
+            # qpos[7] = 1.0
+            # tianyi_env.step_full(qpos)
 
+            # # tianyi_env.reset_to_home()
 
+            # tianyi_env.reset_to_parepre()
 
         # warm up
         import time
         time.sleep(2)
-        obs = robot_env.get_obs()
+        if self.exp_type == 'tiangong_1rgb':
+            obs = robot_env.get_obs_full()
+        else:
+            obs = robot_env.get_obs()
         print('***obs***:', obs)
 
         ###
@@ -338,14 +388,21 @@ class InferVLAIL():
         global preparing
         while preparing:
             # ...
-            obs = robot_env.get_obs()
+            # obs = robot_env.get_obs()
+            if self.exp_type == 'tiangong_1rgb':
+                obs = robot_env.get_obs_full()
+            else:
+                obs = robot_env.get_obs()
             input_image = self.get_image(obs, show_img=True)
             # print('***obs***:', obs)
 
         preparing = True
         ###
         for i in range(2):
-            obs = robot_env.get_obs()
+            if self.exp_type == 'tiangong_1rgb':
+                obs = robot_env.get_obs_full()
+            else:
+                obs = robot_env.get_obs()
 
         max_timesteps = self.args['episode_len']
 
@@ -357,7 +414,7 @@ class InferVLAIL():
 
         if temporal_agg:
             # all_time_actions = np.zeros([max_timesteps, max_timesteps + chunk_size, action_dim])
-            all_time_actions = torch.zeros([max_timesteps, max_timesteps+chunk_size, action_dim]).cuda()
+            all_time_actions = np.zeros([max_timesteps, max_timesteps+chunk_size, action_dim]).cuda()
             query_frequency = 1
         else:
             query_frequency = chunk_size
@@ -371,23 +428,27 @@ class InferVLAIL():
                 if self.args['agent_class'] == 'ACT':
                     if t % query_frequency == 0:
                         all_actions = self.agent(qpos_data, image_data, input_depth, language_distilbert=self.encoded_lang)
-                        # all_actions = all_actions.cpu().numpy()
+                        all_actions = all_actions.cpu().numpy()
+
+                        if self.exp_type == 'tiangong_1rgb':
+                            all_actions = self.process_tiangong_action(all_actions)
                     
                     if temporal_agg:
                         infer_chunk = chunk_size
-                        print(f"all_actions: {all_actions.size()}")
-                        print(f"all_time_actions: {all_time_actions.size()}")
+                        print(f"all_actions: {all_actions.shape}")
+                        print(f"all_time_actions: {all_time_actions.shape}")
                         print(f"t: {t}, chunk_size:{chunk_size}")
                         # all_time_actions[[t], t:t+chunk_size] = all_actions
                         all_time_actions[[t], t:t+infer_chunk] = all_actions[:,:infer_chunk]
                         
                         actions_for_curr_step = all_time_actions[:, t]
-                        actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+                        actions_populated = np.all(actions_for_curr_step != 0, axis=1)
                         actions_for_curr_step = actions_for_curr_step[actions_populated]
                         k = 0.01
                         exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
                         exp_weights = exp_weights / exp_weights.sum()
-                        exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
+                        # exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
+                        exp_weights = exp_weights[:, np.newaxis]
                         raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
                     else:
                         raw_action = all_actions[:, t % query_frequency]
@@ -395,34 +456,41 @@ class InferVLAIL():
                     if t % query_frequency == 0:
                         all_actions = self.agent(qpos_data, image_data, input_depth, language_distilbert=self.encoded_lang)
                         print(f"======= t :{t}, all_actions size: {all_actions.size()}")
+                        all_actions = all_actions.cpu().numpy()
+
+                        if self.exp_type == 'tiangong_1rgb':
+                            all_actions = self.process_tiangong_action(all_actions)
                     
                     temporal_agg = False
                     if temporal_agg:
                         print("temporal_agg:",temporal_agg)
                         infer_chunk = chunk_size #8 #num_queries #1 #5 #num_queries #10
-                        print(f"all_actions: {all_actions.size()}")
-                        print(f"all_time_actions: {all_time_actions.size()}")
+                        print(f"all_actions: {all_actions.shape}")
+                        print(f"all_time_actions: {all_time_actions.shape}")
                         print(f"t: {t}, num_queries:{num_queries}")
                         # all_time_actions[[t], t:t+num_queries] = all_actions
                         all_time_actions[[t], t:t+infer_chunk] = all_actions[:,:infer_chunk]
                         actions_for_curr_step = all_time_actions[:, t]
-                        actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+                        actions_populated = np.all(actions_for_curr_step != 0, axis=1)
                         actions_for_curr_step = actions_for_curr_step[actions_populated]
                         k = 0.01
                         exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
                         exp_weights = exp_weights / exp_weights.sum()
-                        exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
+                        # exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
+                        exp_weights = exp_weights[:, np.newaxis]
                         raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
                     else:
                         raw_action = all_actions[:, t % query_frequency]
-                        print(f"t: {t}, raw_action: {raw_action.size()}")
+                        print(f"t: {t}, raw_action: {raw_action.shape}")
 
-                raw_action = raw_action.squeeze(0).cpu().numpy()
+                # raw_action = raw_action.squeeze(0).cpu().numpy()
+                raw_action = raw_action[0]
                 action_pred = self.action_post_process(raw_action, self.dataset_stats)
                 print(f"action_pred size: {action_pred.shape}")
                 if self.exp_type == 'tiangong_1rgb':
-                    robot_env.act(action_pred)
-                    obs = robot_env.get_obs()
+                    # robot_env.act(action_pred)
+                    robot_env.step_full(action_pred)
+                    obs = robot_env.get_obs_full()
                 else:
                     obs = robot_env.step(action_pred)
 

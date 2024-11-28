@@ -16,9 +16,9 @@ export TORCH_HOME=/home/ps/wk/cache_model/torch_model
 # /media/ps/Extreme Pro_1/wk/benchmark_results/act/tiangong_1rgb_place_button
 
 python3 deploy_algo.py \
-        --task_name tiangong_1rgb_place_button \
-        --camera_names latest_images \
-        --ckpt_dir /media/ps/Extreme\ Pro_1/wk/benchmark_results/act/tiangong_1rgb_place_button/ckpt \
+        --task_name tiangong_1rgb_mode1_place_button_lr1e5_batch24_chunk50 \
+        --camera_names left \
+        --ckpt_dir /home/ps/wk/benchmark_results/act/tiangong_1rgb_mode1_place_button_lr1e5_batch24_chunk50 \
         --exp_type tiangong_1rgb \
         --ckpt_name agent_best.ckpt \
         --agent_class ACT \
@@ -26,5 +26,5 @@ python3 deploy_algo.py \
         --kl_weight 10 \
         --backbone 'resnet18' \
         --act_norm_class norm2 \
-        --tg_mode mode4 \
+        --tg_mode mode1 \
         --temporal_agg --num_steps 0 \
