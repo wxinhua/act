@@ -22,6 +22,7 @@ current_directory = os.getcwd()
 # Append the current working directory to sys.path
 sys.path.append(current_directory)
 
+from dataset_load.read_franka_h5 import ReadH5Files
 from agent.act import ACTPolicy
 from agent.droid_difffusion import DroidDiffusionPolicy
 
@@ -138,7 +139,7 @@ class InferVLAIL():
 
     def action_post_process(self, action, stats):
         act_norm_class = self.args['act_norm_class']
-        # print(f'act_norm_class: {act_norm_class}')
+        print(f'act_norm_class: {act_norm_class}')
         if act_norm_class == 'norm1':
             action = ((action + 1) / 2) * (stats['action_max'] - stats['action_min']) + stats['action_min']
         elif act_norm_class == 'norm2':
@@ -265,8 +266,8 @@ class InferVLAIL():
         # input_image: (3, 480, 640, 3)
         # tiangong mode4: input_qpos: (14,)
         # tiangong mode4: input_image: (1, 480, 640, 3)
-        print(f"input_qpos: {input_qpos.shape}")
-        print(f"input_image: {input_image.shape}")
+        # print(f"input_qpos: {input_qpos.shape}")
+        # print(f"input_image: {input_image.shape}")
         # print(f"input_depth: {input_depth.shape}")
 
         qpos_data = torch.from_numpy(input_qpos).float()
@@ -333,6 +334,30 @@ class InferVLAIL():
         
         return all_actions
 
+    def init_tiangong(self, robot_env, h5_file):
+
+        robot_infor = {'camera_names': ['camera_top'],
+                        'camera_sensors': ['rgb_images'],
+                        'arms': ['master', 'puppet'],
+                        'controls': ['joint_position', 'end_effector']}
+
+        read_h5files = ReadH5Files(robot_infor)
+
+        image_dict, control_dict, base_dict, is_sim, is_compress = read_h5files.execute(h5_file)
+        end_effect = control_dict['puppet']['end_effector']
+        joint_position = control_dict['puppet']['joint_position']
+
+        left_hand_jpos = end_effect[0, :6]
+        right_hand_jpos = end_effect[0, 6:12]
+        left_arm_jpos = joint_position[0, :7]
+        right_arm_jpos = joint_position[0, 7:14]
+
+        prepare_left = [-0.176873, 0.103522, -1.334014, -0.1800, 1.2640, -0.01137, 0.2419, 1.0]
+        prepare_right = [0.55696, -0.043007, 1.26522, 0.94075, -0.58208, -0.10169, 0.11724, 1.0]
+        prepare_left[:7] = left_arm_jpos
+        prepare_right[:7] = right_arm_jpos
+        robot_env.move_to_target(prepare_left + prepare_right)
+
     def execute(self):
         ###
         listener_thread = threading.Thread(target=self.start_keyboard_listener, daemon=True)
@@ -374,7 +399,15 @@ class InferVLAIL():
 
             # # tianyi_env.reset_to_home()
 
-            robot_env.reset_to_parepre()
+            # robot_env.reset_to_parepre()
+
+            # traj_list = ['/home/ps/wk/benchmark_results/tiangong_1122_traj.hdf5',
+            # '/home/ps/wk/benchmark_results/tiangong_1122_traj_2.hdf5', 
+            # '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5' ]
+
+            # h5_file = '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5'
+            h5_file = '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5'
+            self.init_tiangong(robot_env, h5_file)
 
         # warm up
         import time
@@ -492,8 +525,18 @@ class InferVLAIL():
                 print(f"action_pred size: {action_pred.shape}")
                 if self.exp_type == 'tiangong_1rgb':
                     # robot_env.act(action_pred)
-                    robot_env.step_full(action_pred)
+                    
+                    prepare_left = [-0.176873, 0.103522, -1.334014, -0.1800, 1.2640, -0.01137, 0.2419, 1.0]
+                    prepare_right = [0.55696, -0.043007, 1.26522, 0.94075, -0.58208, -0.10169, 0.11724, 1.0]
+                    left_arm_jpos = action_pred[12:19]
+                    right_arm_jpos = action_pred[19:26]
+                    prepare_left[:7] = left_arm_jpos
+                    prepare_right[:7] = right_arm_jpos
+                    robot_env.move_to_target(prepare_left + prepare_right)
+
+                    # robot_env.step_full(action_pred)
                     obs = robot_env.get_obs_full()
+                    time.sleep(0.2)
                 else:
                     obs = robot_env.step(action_pred)
 

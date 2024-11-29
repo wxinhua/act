@@ -115,7 +115,7 @@ case $EXP_TYPE in
         ;;
     tiangong_1rgb)
         CMD="python3 train_algo.py \
-        --task_name place_button \
+        --task_name $TASK_NAME \
         --camera_names camera_top \
         --ckpt_dir ./ckpt_dir/ACT_camt/${DAY}/table/${EXP_TYPE}_${TG_MODE}_${TASK_NAME}_lr1e5_batch24_chunk50 \
         --exp_type $EXP_TYPE \
