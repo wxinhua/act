@@ -14,14 +14,20 @@ export TORCH_HOME=/home/ps/wk/cache_model/torch_model
 # num_steps is used for training
 # --ckpt_dir /media/ps/wk/benchmark_results/act/ur_1rgb_close_trash_can/ckpt \
 # /media/ps/Extreme Pro_1/wk/benchmark_results/act/tiangong_1rgb_place_button
+# /media/ps/Extreme Pro_1/wk/benchmark_results/act/241202
 
 # tiangong_1rgb_mode1_place_button_lr1e5_batch24_chunk50
 # tiangong_1rgb_mode1_tiangong_data_1122_test_lr1e5_batch24_chunk50
 
+# mode5 good
+# mode6 bad
+# mode7 bad
+# mode8 good
+
 python3 deploy_algo.py \
-        --task_name tiangong_1rgb_mode1_place_button_lr1e5_batch24_chunk50 \
+        --task_name tiangong_1rgb_mode1_cylinder_pick_box_place_close_lr1e5_batch24_chunk50 \
         --camera_names left \
-        --ckpt_dir /home/ps/wk/benchmark_results/act/tiangong_1rgb_mode1_place_button_lr1e5_batch24_chunk50 \
+        --ckpt_dir /media/ps/Extreme\ Pro_1/wk/benchmark_results/act/241129/tiangong_1rgb_mode1_cylinder_pick_box_place_close_lr1e5_batch24_chunk50 \
         --exp_type tiangong_1rgb \
         --ckpt_name agent_best.ckpt \
         --agent_class ACT \

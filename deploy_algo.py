@@ -86,6 +86,11 @@ class InferVLAIL():
             elif self.args['tg_mode'] == 'mode4':
                 self.config['agent_config']['state_dim'] = 14
                 self.config['agent_config']['action_dim'] = 14
+            elif self.args['tg_mode'] in ['mode5', 'mode6', 'mode7', 'mode8']:
+                self.config['robot_infor']['arms'] = ['puppet', 'master']
+                self.config['robot_infor']['controls'] = ['joint_position']
+                self.config['agent_config']['state_dim'] = 16
+                self.config['agent_config']['action_dim'] = 16
 
         if self.args['use_depth_image']:
             self.config['robot_infor']['camera_sensors'] = ['rgb_images', 'depth_images']
@@ -107,18 +112,19 @@ class InferVLAIL():
         self.agent.cuda()
 
         self.exp_type = self.args['exp_type']
-        if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'tiangong_1rgb']:
-            self.qpos_arm_key = 'puppet'
-            self.action_arm_key = 'puppet'
-            self.ctl_elem_key = 'joint_position'
-        elif self.exp_type in ['songling_3rgb']:
-            self.qpos_arm_key = 'puppet'
-            self.action_arm_key = 'master'
-            self.ctl_elem_key = ['joint_position_left', 'joint_position_right']
-        elif self.exp_type in ['simulation_4rgb']:
-            self.qpos_arm_key = 'franka'
-            self.action_arm_key = 'franka'
-            self.ctl_elem_key = 'joint_position'
+        # if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'tiangong_1rgb']:
+        #     self.qpos_arm_key = 'puppet'
+        #     self.action_arm_key = 'puppet'
+        #     self.ctl_elem_key = 'joint_position'
+        # elif self.exp_type in ['songling_3rgb']:
+        #     self.qpos_arm_key = 'puppet'
+        #     self.action_arm_key = 'master'
+        #     self.ctl_elem_key = ['joint_position_left', 'joint_position_right']
+        # elif self.exp_type in ['simulation_4rgb']:
+        #     self.qpos_arm_key = 'franka'
+        #     self.action_arm_key = 'franka'
+        #     self.ctl_elem_key = 'joint_position'
+        
         
         if self.args['use_lang']:
             raw_lang = self.args['raw_lang']
@@ -250,6 +256,9 @@ class InferVLAIL():
                 qpos = np.concatenate((left_hand_jpos[[3,4]], right_hand_jpos[3:4], left_jpos, right_jpos))
             elif self.args['tg_mode'] == 'mode4':
                 qpos = np.concatenate((left_jpos, right_jpos))
+            elif self.args['tg_mode'] in ['mode5', 'mode6', 'mode7', 'mode8']:
+                ### 16 dim joint_position
+                qpos = obs['qpos']
         else:
             # for franka_3rgb, ur_1rgb
             qpos = obs['qpos']
@@ -398,22 +407,27 @@ class InferVLAIL():
             # tianyi_env.step_full(qpos)
 
             # # tianyi_env.reset_to_home()
-
-            # robot_env.reset_to_parepre()
+            if self.args['tg_mode'] in ['mode1', 'mode2', 'mode3', 'mode4']:
+                robot_env.reset_to_parepre()
+            elif self.args['tg_mode'] in ['mode5', 'mode6', 'mode7', 'mode8']:
+                robot_env.reset_to_parepre_left()
 
             # traj_list = ['/home/ps/wk/benchmark_results/tiangong_1122_traj.hdf5',
             # '/home/ps/wk/benchmark_results/tiangong_1122_traj_2.hdf5', 
             # '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5' ]
 
             # h5_file = '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5'
-            h5_file = '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5'
-            self.init_tiangong(robot_env, h5_file)
+            # h5_file = '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5'
+            # self.init_tiangong(robot_env, h5_file)
 
         # warm up
         import time
         time.sleep(2)
         if self.exp_type == 'tiangong_1rgb':
-            obs = robot_env.get_obs_full()
+            if self.args['tg_mode'] in ['mode1', 'mode2', 'mode3', 'mode4']:
+                obs = robot_env.get_obs_full()
+            else:
+                obs = robot_env.get_obs()
         else:
             obs = robot_env.get_obs()
         print('***obs***:', obs)
@@ -425,7 +439,10 @@ class InferVLAIL():
             # ...
             # obs = robot_env.get_obs()
             if self.exp_type == 'tiangong_1rgb':
-                obs = robot_env.get_obs_full()
+                if self.args['tg_mode'] in ['mode1', 'mode2', 'mode3', 'mode4']:
+                    obs = robot_env.get_obs_full()
+                else:
+                    obs = robot_env.get_obs()
             else:
                 obs = robot_env.get_obs()
             input_image = self.get_image(obs, show_img=True)
@@ -435,7 +452,10 @@ class InferVLAIL():
         ###
         for i in range(2):
             if self.exp_type == 'tiangong_1rgb':
-                obs = robot_env.get_obs_full()
+                if self.args['tg_mode'] in ['mode1', 'mode2', 'mode3', 'mode4']:
+                    obs = robot_env.get_obs_full()
+                else:
+                    obs = robot_env.get_obs()
             else:
                 obs = robot_env.get_obs()
 
@@ -525,18 +545,25 @@ class InferVLAIL():
                 print(f"action_pred size: {action_pred.shape}")
                 if self.exp_type == 'tiangong_1rgb':
                     # robot_env.act(action_pred)
-                    
-                    prepare_left = [-0.176873, 0.103522, -1.334014, -0.1800, 1.2640, -0.01137, 0.2419, 1.0]
-                    prepare_right = [0.55696, -0.043007, 1.26522, 0.94075, -0.58208, -0.10169, 0.11724, 1.0]
-                    left_arm_jpos = action_pred[12:19]
-                    right_arm_jpos = action_pred[19:26]
-                    prepare_left[:7] = left_arm_jpos
-                    prepare_right[:7] = right_arm_jpos
-                    robot_env.move_to_target(prepare_left + prepare_right)
-
-                    # robot_env.step_full(action_pred)
-                    obs = robot_env.get_obs_full()
-                    time.sleep(0.2)
+                    if self.args['tg_mode'] in ['mode1', 'mode2', 'mode3']:
+                        robot_env.step_full(action_pred)
+                        obs = robot_env.get_obs_full()
+                        time.sleep(0.2)
+                    if self.args['tg_mode'] in ['mode4']:
+                        prepare_left = [-0.176873, 0.103522, -1.334014, -0.1800, 1.2640, -0.01137, 0.2419, 1.0]
+                        prepare_right = [0.55696, -0.043007, 1.26522, 0.94075, -0.58208, -0.10169, 0.11724, 1.0]
+                        left_arm_jpos = action_pred[12:19]
+                        right_arm_jpos = action_pred[19:26]
+                        prepare_left[:7] = left_arm_jpos
+                        prepare_right[:7] = right_arm_jpos
+                        robot_env.move_to_target(prepare_left + prepare_right)
+                        obs = robot_env.get_obs_full()
+                        time.sleep(0.1)
+                    elif self.args['tg_mode'] in ['mode5', 'mode6', 'mode7', 'mode8']:
+                        ######## 16 dim
+                        robot_env.step(action_pred)
+                        # time.sleep(0.1)
+                        obs = robot_env.get_obs()
                 else:
                     obs = robot_env.step(action_pred)
 
@@ -599,7 +626,7 @@ def get_arguments():
     parser.set_defaults(use_data_aug=False)
 
 
-    parser.add_argument('--episode_len', action='store', type=int, help='episode_len', default=5000, required=False)
+    parser.add_argument('--episode_len', action='store', type=int, help='episode_len', default=10000, required=False)
 
     parser.add_argument('--use_actions_interpolation', action='store', type=bool, help='use_actions_interpolation', default=False, required=False)
     parser.add_argument('--pos_lookahead_step', action='store', type=int, help='pos_lookahead_step', default=0, required=False)
