@@ -145,6 +145,11 @@ class VLAIL:
             elif self.args['tg_mode'] == 'mode4':
                 self.config['agent_config']['state_dim'] = 14
                 self.config['agent_config']['action_dim'] = 14
+            elif self.args['tg_mode'] in ['mode5', 'mode6', 'mode7', 'mode8']:
+                self.config['robot_infor']['arms'] = ['puppet', 'master']
+                self.config['robot_infor']['controls'] = ['joint_position']
+                self.config['agent_config']['state_dim'] = 16
+                self.config['agent_config']['action_dim'] = 16
 
         if self.args['use_depth_image']:
             self.config['robot_infor']['camera_sensors'] = ['rgb_images', 'depth_images']
@@ -578,6 +583,10 @@ if __name__ == "__main__":
     # mode2: input 26, output 14+4=18: Index Finger食指, Thumb拇指
     # mode3: input 14+4=18, output 14+4=18: Index Finger食指, Thumb拇指
     # mode4: input 14, output 14: only contron arm
+    # mode5: inrocs data: input 16 puppet, output 16 master
+    # mode6: inrocs data: input 16 master, output 16 master
+    # mode7: inrocs data: input 16 puppet, output 16 puppet
+    # mode8: inrocs data: input 16 master, output 16 puppet
     parser.add_argument('--tg_mode', type=str, default='mode1')
 
     main(vars(parser.parse_args()))

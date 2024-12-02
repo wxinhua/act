@@ -310,6 +310,7 @@ if __name__ == "__main__":
     # dest_folder = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/h5_simulation_4rgb_img/pick_and_place_06'
 
     ######### new tiangong 1122 /media/data/h5_tiangong_1rgb/tiangong_data_1122_test
+    # place_bread_plate_1128 only joint_position 16 dim
     source_folder = '/media/data/h5_tiangong_1rgb/tiangong_data_1122_test' 
     dest_folder = '/media/data/h5_tiangong_1rgb_img/tiangong_data_1122_test'
 

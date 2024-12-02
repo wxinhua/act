@@ -57,9 +57,26 @@ class EpisodicDataset(torch.utils.data.Dataset):
             self.action_arm_key = 'franka'
             self.ctl_elem_key = 'joint_position'
         elif exp_type in ['tiangong_1rgb']:
-            self.qpos_arm_key = 'puppet'
-            self.action_arm_key = 'puppet'
-            self.ctl_elem_key = ['end_effector', 'joint_position']
+            if self.tg_mode == 'mode5':
+                self.qpos_arm_key = 'puppet'
+                self.action_arm_key = 'master'
+                self.ctl_elem_key = 'joint_position'
+            elif self.tg_mode == 'mode6':
+                self.qpos_arm_key = 'master'
+                self.action_arm_key = 'master'
+                self.ctl_elem_key = 'joint_position'
+            elif self.tg_mode == 'mode7':
+                self.qpos_arm_key = 'puppet'
+                self.action_arm_key = 'puppet'
+                self.ctl_elem_key = 'joint_position'
+            elif self.tg_mode == 'mode8':
+                self.qpos_arm_key = 'master'
+                self.action_arm_key = 'puppet'
+                self.ctl_elem_key = 'joint_position'
+            else:
+                self.qpos_arm_key = 'puppet'
+                self.action_arm_key = 'puppet'
+                self.ctl_elem_key = ['end_effector', 'joint_position']
 
         self.read_h5files = ReadH5Files(self.robot_infor)
 
@@ -131,7 +148,6 @@ class EpisodicDataset(torch.utils.data.Dataset):
         episode_id, start_ts = self._locate_transition(index)
 
         dataset_path = self.dataset_path_list[episode_id]
-        
         
         image_dict, control_dict, base_dict, _, is_compress = self.read_h5files.execute(dataset_path, camera_frame=start_ts, use_depth_image=self.use_depth_image)
 
@@ -352,9 +368,26 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
         action_arm_key = 'franka'
         ctl_elem_key = 'joint_position'
     elif exp_type in ['tiangong_1rgb']:
-        qpos_arm_key = 'puppet'
-        action_arm_key = 'puppet'
-        ctl_elem_key = ['end_effector', 'joint_position']
+        if tg_mode == 'mode5':
+            qpos_arm_key = 'puppet'
+            action_arm_key = 'master'
+            ctl_elem_key = 'joint_position'
+        elif tg_mode == 'mode6':
+            qpos_arm_key = 'master'
+            action_arm_key = 'master'
+            ctl_elem_key = 'joint_position'
+        elif tg_mode == 'mode7':
+            qpos_arm_key = 'puppet'
+            action_arm_key = 'puppet'
+            ctl_elem_key = 'joint_position'
+        elif tg_mode == 'mode8':
+            qpos_arm_key = 'master'
+            action_arm_key = 'puppet'
+            ctl_elem_key = 'joint_position'
+        else:
+            qpos_arm_key = 'puppet'
+            action_arm_key = 'puppet'
+            ctl_elem_key = ['end_effector', 'joint_position']
 
     for list_id, cur_dataset_path_list in enumerate([train_dataset_path_list, val_dataset_path_list]):
         cur_episode_len = []
@@ -367,7 +400,7 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
                     action_list = []
                     for ele in ctl_elem_key:
                         if exp_type in ['tiangong_1rgb'] and ele == 'end_effector':
-                            print(f"tg_mode: {tg_mode}")
+                            # print(f"tg_mode: {tg_mode}")
                             if tg_mode == 'mode1':
                                 cur_qpos = control_dict[qpos_arm_key][ele][:]
                                 cur_action = control_dict[action_arm_key][ele][:]

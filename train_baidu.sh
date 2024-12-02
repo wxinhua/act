@@ -127,7 +127,7 @@ case $EXP_TYPE in
         --act_norm_class norm2 \
         --lr_scheduler CosineLR \
         --tg_mode $TG_MODE \
-        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
+        --num_steps 10000 --eval_every 10001 --validate_every 1000 --save_every 5000 \
         --use_wandb \
         --wandb_name ACT_${EXP_TYPE}_${TG_MODE}_camlrt_${TASK_NAME}_lr1e5_batch24_chunk50"
         ;;
@@ -136,6 +136,8 @@ case $EXP_TYPE in
         exit 1
         ;;
 esac
+
+# --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
 
 echo $CMD
 CUDA_VISIBLE_DEVICES=0 $CMD
