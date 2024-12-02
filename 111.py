@@ -68,8 +68,8 @@ def print_hdf5_structure(hdf5_file, indent=0):
 # traj_list = ['/home/ps/wk/benchmark_results/tiangong_1122_traj.hdf5',
 #             '/home/ps/wk/benchmark_results/tiangong_1122_traj_2.hdf5', 
 #             '/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5' ]
-# traj_list = ['/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5']
-traj_list = ['/home/ps/wk/benchmark_results/tiangong_1122_traj.hdf5']
+traj_list = ['/home/ps/wk/benchmark_results/tiangong_place_button_traj.hdf5']
+# traj_list = ['/home/ps/wk/benchmark_results/tiangong_1122_traj.hdf5']
 
 robot_infor = {'camera_names': ['camera_top'],
                 'camera_sensors': ['rgb_images'],
@@ -144,7 +144,7 @@ for idx, h5_file_path in enumerate(traj_list):
         # img.save(os.path.join(img_dir, str(idx)+'_rgb.png'))
 
         tianyi_env.reset_to_parepre()
-        interval = 4 #20
+        interval = 20 #20
         traj_len = left_arm_jpos.shape[0] // interval
         for i in range(traj_len):
             time.sleep(1)
