@@ -66,6 +66,41 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --use_wandb \
         --wandb_name ACT_tiangong_1rgb_mode3_camlrt_place_bread_plate_1128_lr1e5_batch24_chunk50 \
 
+################
+# /media/data/h5_tiangong_1rgb/place_bread_plate_241202
+
+CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
+        --task_name place_bread_plate_241202 \
+        --camera_names camera_top \
+        --ckpt_dir /media/results/act/tiangong_1rgb/ACT_camt/241203/table/tiangong_1rgb_mode8_place_bread_plate_241202_lr1e4_batch48_chunk50 \
+        --exp_type tiangong_1rgb \
+        --agent_class ACT \
+        --batch_size_train 48 --batch_size_val 48 \
+        --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
+        --lr 1e-4 --kl_weight 10 \
+        --backbone 'resnet18' \
+        --act_norm_class norm2 \
+        --lr_scheduler CosineLR \
+        --tg_mode mode8 \
+        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
+        --use_wandb \
+        --wandb_name ACT_tiangong_1rgb_mode8_camt_place_bread_plate_241202_lr1e4_batch48_chunk50 \
 
 
+CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
+        --task_name place_bread_plate_241203 \
+        --camera_names camera_top \
+        --ckpt_dir /media/results/act/tiangong_1rgb/ACT_camt/241203/table/tiangong_1rgb_mode8_place_bread_plate_241203_lr1e4_batch48_chunk50 \
+        --exp_type tiangong_1rgb \
+        --agent_class ACT \
+        --batch_size_train 48 --batch_size_val 48 \
+        --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
+        --lr 1e-4 --kl_weight 10 \
+        --backbone 'resnet18' \
+        --act_norm_class norm2 \
+        --lr_scheduler CosineLR \
+        --tg_mode mode8 \
+        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
+        --use_wandb \
+        --wandb_name ACT_tiangong_1rgb_mode8_camt_place_bread_plate_241203_lr1e4_batch48_chunk50 \
 
