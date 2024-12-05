@@ -200,6 +200,7 @@ class InferVLAIL():
             else:
                 curr_image = rgb_image_encode
 
+            
             # if cam_name == 'top':
             if self.resize_images:
                 # from 640 1280 -> 480 640
