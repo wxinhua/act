@@ -1,0 +1,17 @@
+2024-12-12 14:28:11,818 - __main__ - INFO   - workspace: /root/will/act_benchmark
+2024-12-12 14:28:11,818 - __main__ - INFO   - cfg_path: ./cfgs/ACT/config_tiangong_1rgb.yaml
+2024-12-12 14:28:20,479 - __main__ - INFO   - train_num_episodes_cumsum: [0]
+2024-12-12 14:28:20,479 - __main__ - INFO   - val_num_episodes_cumsum: [0]
+2024-12-12 14:28:20,480 - __main__ - INFO   - Train: cur task_idx: 0; num_episodes_i: 0
+2024-12-12 14:28:20,480 - __main__ - INFO   - Val: cur task_idx: 0; num_episodes_i: 0
+2024-12-12 14:28:20,480 - __main__ - INFO   - train_episode_ids: []
+2024-12-12 14:28:20,480 - __main__ - INFO   - val_episode_ids: []
+2024-12-12 14:28:20,480 - __main__ - INFO   - len train_episode_ids: 0
+2024-12-12 14:28:20,480 - __main__ - INFO   - len val_episode_ids: 0
+2024-12-12 14:28:20,480 - __main__ - INFO   - 
+
+Data from: ['/media/data/benchmark1_0/h5_peter_tiangong_1rgb/desktop_throw_battery']
+- Train on [0] episodes
+- Test on [0] episodes
+
+

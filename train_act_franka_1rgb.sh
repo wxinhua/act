@@ -54,7 +54,7 @@ export TORCH_HOME=/media/users/wk/torch_model
 CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --task_name bread_in_basket \
         --camera_names camera_top \
-        --ckpt_dir ./ckpt_dir/ACT_camt/241112/table/franka_1rgb_bread_in_basket_lr1e5_batch24_chunk50 \
+        --ckpt_dir /media/wk/IL_research/test \
         --exp_type franka_1rgb \
         --agent_class ACT \
         --batch_size_train 48 --batch_size_val 48 \
@@ -66,6 +66,7 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
         --wandb_name ACT_franka_1rgb_camlrt_bread_in_basket_lr1e5_batch24_chunk50 \
+        --train_dataset_size 1 \
 
 
 

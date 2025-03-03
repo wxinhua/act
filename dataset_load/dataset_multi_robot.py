@@ -20,6 +20,7 @@ from PIL import Image
 import psutil
 import os
 from torch.utils.data import Sampler, DistributedSampler
+from itertools import islice
 
 # process = psutil.Process(os.getpid())
 # print_memory_info(process, 1)
@@ -337,6 +338,7 @@ def get_files(dataset_dir, robot_infor):
     # dataset_dir = os.path.join(dataset_dir, 'success_episodes')
     files = []
     for trajectory_id in sorted(os.listdir(dataset_dir)):
+        # print(f'trajectory_id is :{trajectory_id}\n')
         trajectory_dir = os.path.join(dataset_dir, trajectory_id)
         file_path = os.path.join(trajectory_dir, 'data/trajectory.hdf5')
         try:
@@ -345,7 +347,59 @@ def get_files(dataset_dir, robot_infor):
         except Exception as e:
             print(f"Open {file_path} fail!")
             print(e)
+
+        if len(files) >= 100 :
+            break
     return files
+
+def get_mixed_files(real_dataset_dir, aug_dataset_dir, aug_number, robot_infor):
+    read_h5files = ReadH5Files(robot_infor)
+    files = []
+    
+    # 1. 首先加载100条真实数据
+    for trajectory_id in sorted(os.listdir(real_dataset_dir)):
+        trajectory_dir = os.path.join(real_dataset_dir, trajectory_id)
+        file_path = os.path.join(trajectory_dir, 'data/trajectory.hdf5')
+        try:
+            _, control_dict, base_dict, _, is_compress = read_h5files.execute(file_path, camera_frame=2)
+            files.append(file_path)
+        except Exception as e:
+            print(f"Open {file_path} fail!")
+            print(e)
+
+        if len(files) >= 100:  # 限制真实数据为100条
+            break
+    
+    real_data_num = len(files)
+    print(f'Loaded {real_data_num} real trajectories')
+    
+    # 2. 然后加载aug_number条增强数据
+    aug_loaded = 0
+    for trajectory_id in sorted(os.listdir(aug_dataset_dir)):
+        trajectory_dir = os.path.join(aug_dataset_dir, trajectory_id)
+        sub_trajectory_dirs = [d for d in sorted(os.listdir(trajectory_dir)) if os.path.isdir(os.path.join(trajectory_dir, d))]
+        
+        for sub_trajectory_dir in sub_trajectory_dirs:
+            file_path = os.path.join(trajectory_dir, sub_trajectory_dir, 'aug_data.h5')
+            try:
+                _, control_dict, base_dict, _, is_compress = read_h5files.execute(file_path, camera_frame=2)
+                files.append(file_path)
+                aug_loaded += 1
+            except Exception as e:
+                print(f"Open {file_path} fail!")
+                print(e)
+
+            if aug_loaded >= aug_number:
+                break
+        if aug_loaded >= aug_number:
+            break
+    
+    total_loaded = len(files)
+    print(f'Total loaded trajectories: {total_loaded} (Real: {real_data_num}, Aug: {aug_loaded})')
+    
+    return files
+    
+
 
 def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, exp_type, tg_mode):
     read_h5files = ReadH5Files(robot_infor)
@@ -545,13 +599,193 @@ def load_data(dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chun
         train_dir = os.path.join(succ_dataset_dir, 'train')
         val_dir = os.path.join(succ_dataset_dir, 'val')
         hdf5_train_files_list = get_files(train_dir, robot_infor)
+        #hdf5_train_files_list = list(islice(hdf5_train_files_list, train_dataset_size))
         hdf5_val_files_list = get_files(val_dir, robot_infor)
         train_dataset_path_list_list.append(hdf5_train_files_list)
         val_dataset_path_list_list.append(hdf5_val_files_list)
-
+ 
         # hdf5_files_list = get_files(dataset_dir, robot_infor)
         # dataset_path_list_list.append(hdf5_files_list)
+    
+    train_num_episodes_l = [len(cur_dataset_path_list) for cur_dataset_path_list in train_dataset_path_list_list]
+    train_num_episodes_cumsum = np.cumsum(train_num_episodes_l)
+    val_num_episodes_l = [len(cur_dataset_path_list) for cur_dataset_path_list in val_dataset_path_list_list]
+    val_num_episodes_cumsum = np.cumsum(val_num_episodes_l)
+    if rank == 0 or rank is None:
+        # print(f"train_num_episodes_cumsum: {train_num_episodes_cumsum}")
+        # print(f"val_num_episodes_cumsum: {val_num_episodes_cumsum}")
+        logger.info(f"train_num_episodes_cumsum: {train_num_episodes_cumsum}")
+        logger.info(f"val_num_episodes_cumsum: {val_num_episodes_cumsum}")
 
+    train_dataset_path_fla_list = flatten_list(train_dataset_path_list_list)
+    train_dataset_path_fla_list = [n for n in train_dataset_path_fla_list if name_filter(n)]
+    val_dataset_path_fla_list = flatten_list(val_dataset_path_list_list)
+    val_dataset_path_fla_list = [n for n in val_dataset_path_fla_list if name_filter(n)]
+
+    train_episode_ids_l = []
+    cur_num_episodes = 0
+    for task_idx, _ in enumerate(train_dataset_path_list_list):
+        # num episodes of task idx
+        num_episodes_i = len(train_dataset_path_list_list[task_idx])
+        if rank == 0 or rank is None:
+            # print(f"Train: cur task_idx: {task_idx}; num_episodes_i: {num_episodes_i}")
+            logger.info(f"Train: cur task_idx: {task_idx}; num_episodes_i: {num_episodes_i}")
+        shuffled_episode_ids_i = np.random.permutation(num_episodes_i)
+        train_episode_ids_l.append(shuffled_episode_ids_i)
+        for i in range(num_episodes_i):
+            shuffled_episode_ids_i[i] += cur_num_episodes
+        cur_num_episodes += num_episodes_i
+
+    val_episode_ids_l = []
+    cur_num_episodes = 0
+    for task_idx, _ in enumerate(val_dataset_path_list_list):
+        # num episodes of task idx
+        num_episodes_i = len(val_dataset_path_list_list[task_idx])
+        if rank == 0 or rank is None:
+            # print(f"Val: cur task_idx: {task_idx}; num_episodes_i: {num_episodes_i}")
+            logger.info(f"Val: cur task_idx: {task_idx}; num_episodes_i: {num_episodes_i}")
+        shuffled_episode_ids_i = np.random.permutation(num_episodes_i)
+        val_episode_ids_l.append(shuffled_episode_ids_i)
+        for i in range(num_episodes_i):
+            shuffled_episode_ids_i[i] += cur_num_episodes
+        cur_num_episodes += num_episodes_i
+    
+    train_episode_ids = np.concatenate(train_episode_ids_l)
+    val_episode_ids = np.concatenate(val_episode_ids_l)
+    if rank == 0 or rank is None:
+        # train_episode_ids: list []
+        # val_episode_ids: list []
+        # print(f"train_episode_ids: {train_episode_ids}")
+        # print(f"val_episode_ids: {val_episode_ids}")
+        # print(f"len train_episode_ids: {len(train_episode_ids)}")
+        # print(f"len val_episode_ids: {len(val_episode_ids)}")
+        logger.info(f"train_episode_ids: {train_episode_ids}")
+        logger.info(f"val_episode_ids: {val_episode_ids}")
+        logger.info(f"len train_episode_ids: {len(train_episode_ids)}")
+        logger.info(f"len val_episode_ids: {len(val_episode_ids)}")
+
+
+    if rank == 0 or rank is None:
+        # print(f'\n\nData from: {dataset_dir_l}\n- Train on {[len(x) for x in train_episode_ids_l]} episodes\n- Test on {[len(x) for x in val_episode_ids_l]} episodes\n\n')
+        logger.info(f'\n\nData from: {dataset_dir_l}\n- Train on {[len(x) for x in train_episode_ids_l]} episodes\n- Test on {[len(x) for x in val_episode_ids_l]} episodes\n\n')
+    
+    norm_stats, train_episode_len, val_episode_len = get_norm_stats(train_dataset_path_fla_list, val_dataset_path_fla_list, robot_infor, exp_type, tg_mode)
+    if rank == 0 or rank is None:
+        # print(f"norm_stats: {norm_stats}")
+        # all_episode_len: list []
+        # print(f"len all_episode_len: {len(all_episode_len)}")
+        # print(f"len train_episode_len: {len(train_episode_len)}")
+        # print(f"len val_episode_len: {len(val_episode_len)}")
+        logger.info(f"norm_stats: {norm_stats}")
+        logger.info(f"len train_episode_len: {len(train_episode_len)}")
+        logger.info(f"len val_episode_len: {len(val_episode_len)}")
+
+    train_episode_len_l = []
+    for cur_task_train_episode_ids in train_episode_ids_l:
+        cur_task_train_episode_len_l = []
+        for i in cur_task_train_episode_ids:
+            cur_task_train_episode_len_l.append(train_episode_len[i])
+        train_episode_len_l.append(cur_task_train_episode_len_l)
+    # if rank == 0 or rank is None:
+    #     # train_episode_len_l: list of list [[task1_ep1, task1_ep2], [task2_ep1, task2_ep2]]
+    #     print(f"train_episode_len_l: {train_episode_len_l}")
+    
+    val_episode_len_l = []
+    for cur_task_val_episode_ids in val_episode_ids_l:
+        cur_task_val_episode_len_l = []
+        for i in cur_task_val_episode_ids:
+            cur_task_val_episode_len_l.append(val_episode_len[i])
+        val_episode_len_l.append(cur_task_val_episode_len_l)
+    # if rank == 0 or rank is None:
+    #     # val_episode_len_l: list of list [[task1_ep1, task1_ep2], [task2_ep1, task2_ep2]]
+    #     print(f"val_episode_len_l: {val_episode_len_l}")
+
+    train_episode_len = flatten_list(train_episode_len_l)
+    val_episode_len = flatten_list(val_episode_len_l)
+    if rank == 0 or rank is None:
+        # train_episode_len: list []
+        # val_episode_len: list []
+        # print(f"train_episode_len: {train_episode_len}")
+        # print(f"val_episode_len: {val_episode_len}")
+        # print(f'Norm stats from: {dataset_dir_l}')
+        logger.info(f'Norm stats from: {dataset_dir_l}')
+    
+    
+    if torch.cuda.device_count() == 1:
+        batch_sampler_train = BatchSampler(batch_size_train, train_episode_len_l, sample_weights)
+        batch_sampler_val = BatchSampler(batch_size_val, val_episode_len_l, None)
+
+        # construct dataset and dataloader
+        train_dataset = EpisodicDataset(train_dataset_path_fla_list, robot_infor, norm_stats, train_episode_ids, train_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image, exp_type=exp_type, tg_mode=tg_mode)
+        val_dataset = EpisodicDataset(val_dataset_path_fla_list, robot_infor, norm_stats, val_episode_ids, val_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image, exp_type=exp_type, tg_mode=tg_mode)
+
+        # train_num_workers = 0
+        train_num_workers = 12 #4 #4 #16
+        # val_num_workers = 0
+        val_num_workers = 12 #4 #4 #16
+        # print(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
+        logger.info(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
+        # pin_memory=True
+        train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler_train, pin_memory=True, num_workers=train_num_workers, prefetch_factor=2)
+        val_dataloader = DataLoader(val_dataset, batch_sampler=batch_sampler_val, pin_memory=True, num_workers=val_num_workers, prefetch_factor=2)
+    else:
+        train_dataset = EpisodicDataset(train_dataset_path_fla_list, robot_infor, norm_stats, train_episode_ids, train_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image,exp_type=exp_type)
+        val_dataset = EpisodicDataset(val_dataset_path_fla_list, robot_infor, norm_stats, val_episode_ids, val_episode_len, chunk_size, rank=rank, use_data_aug=use_data_aug, act_norm_class=act_norm_class, use_raw_lang=use_raw_lang, use_depth_image=use_depth_image,exp_type=exp_type)
+        num_replicas = torch.cuda.device_count()
+        # val_num_workers = 8 if train_dataset.augment_images else 2
+        train_num_workers = 8 #0 #4 #0 #for local #8 #0 #2
+        val_num_workers = 8 #0 #4 #0 #for local#8 #0 #2
+
+        if rank == 0 or rank is None:
+            logger.info(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
+
+        batch_sampler_train = DistributedBatchSampler(train_dataset, batch_size_train, train_episode_len, sample_weights, num_replicas=num_replicas, rank=rank)
+        batch_sampler_val = DistributedBatchSampler(val_dataset, batch_size_val, val_episode_len, None, num_replicas=num_replicas, rank=rank)
+
+        # prefetch_factor=2
+        train_dataloader = DataLoader(
+            train_dataset, 
+            batch_sampler=batch_sampler_train, pin_memory=True, num_workers=train_num_workers)
+        
+        val_dataloader = DataLoader(
+            val_dataset, 
+            batch_sampler=batch_sampler_val, pin_memory=True, num_workers=val_num_workers)
+        
+    return train_dataloader, val_dataloader, norm_stats
+
+
+def load_mixed_data(dataset_dir_l, aug_dataset_dir_l, robot_infor, batch_size_train, batch_size_val, chunk_size, args=None, use_depth_image=False, sample_weights=None, rank=None, use_data_aug=False, act_norm_class='norm2', use_raw_lang=False, name_filter=None, exp_type='franka_3rgb', logger=None, tg_mode='mode1'):
+    if type(dataset_dir_l) == str:
+        dataset_dir_l = [dataset_dir_l]
+
+    if type(aug_dataset_dir_l) == str:
+        aug_dataset_dir_l = [aug_dataset_dir_l]
+    # print(f'aug_dataset_dir_l type is:{type(aug_dataset_dir_l)}, path is:{aug_dataset_dir_l}')
+    aug_num = args['aug_num']
+
+    # [[task1_epi1, task1_epi2], [task2_epi1, task2_epi2]]
+    train_dataset_path_list_list = []
+    val_dataset_path_list_list = []
+    # logger.info(f"load_data is called!")
+    for real_dataset_dir, aug_dataset_dir in zip(dataset_dir_l, aug_dataset_dir_l):
+        # print(f'real_dataset_dir type is:{type(real_dataset_dir)}, path is :{real_dataset_dir}')
+        # print(f'aug_dataset_dir type is:{type(aug_dataset_dir)}, path is :{aug_dataset_dir}')
+        # hdf5_files_list = find_all_hdf5(dataset_dir) 
+        # obtain train test split
+        succ_real_dataset_dir = os.path.join(real_dataset_dir, 'success_episodes')
+        real_train_dir = os.path.join(succ_real_dataset_dir, 'train')
+        #aug_train_dir = os.path.join(aug_dataset_dir, '')
+        val_dir = os.path.join(succ_real_dataset_dir, 'val')
+
+        hdf5_train_files_list = get_mixed_files(real_train_dir, aug_dataset_dir, aug_num, robot_infor)
+        #hdf5_train_files_list = list(islice(hdf5_train_files_list, train_dataset_size))
+        hdf5_val_files_list = get_files(val_dir, robot_infor)
+        train_dataset_path_list_list.append(hdf5_train_files_list)
+        val_dataset_path_list_list.append(hdf5_val_files_list)
+ 
+        # hdf5_files_list = get_files(dataset_dir, robot_infor)
+        # dataset_path_list_list.append(hdf5_files_list)
+    
     train_num_episodes_l = [len(cur_dataset_path_list) for cur_dataset_path_list in train_dataset_path_list_list]
     train_num_episodes_cumsum = np.cumsum(train_num_episodes_l)
     val_num_episodes_l = [len(cur_dataset_path_list) for cur_dataset_path_list in val_dataset_path_list_list]

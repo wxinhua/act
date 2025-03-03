@@ -214,14 +214,22 @@ class VLAIL:
         # train_ratio = task_config.get('train_ratio', [0.95])
         # name_filter = task_config.get('name_filter', lambda n: True)
 
-        Franka_1rgb_DATA_DIR = '/media/data/h5_franka_1rgb'
-        Franka_3rgb_DATA_DIR = '/media/data/h5_franka_3rgb'
+        #Franka_1rgb_DATA_DIR = '/media/data/h5_franka_1rgb'
+        Franka_1rgb_DATA_DIR = '/media/users/wk/benchmark_data_1/h5_franka_1rgb'
+
+        Franka_3rgb_DATA_DIR = '/media/wk/IL_research/h5_franka_3rgb'
+        Aug_Franka_3rgb_DATA_DIR = '/media/wk/IL_research/genaug_baseline'
+
         Songling_3rgb_DATA_DIR = '/media/data/h5_songling_3rgb'
-        Tiangong_1rgb_DATA_DIR = '/media/data/h5_tiangong_1rgb'
+
+        #Tiangong_1rgb_DATA_DIR = '/media/data/h5_tiangong_1rgb'
+        Tiangong_1rgb_DATA_DIR = '/media/data/benchmark1_0/h5_peter_tiangong_1rgb'
+
         UR_1rgb_DATA_DIR = '/media/data/h5_ur_1rgb'
 
         if self.args['exp_type'] == 'franka_3rgb':
             robot_data_dir = Franka_3rgb_DATA_DIR
+            aug_data_dir = Aug_Franka_3rgb_DATA_DIR
         elif self.args['exp_type'] == 'franka_1rgb':
             robot_data_dir = Franka_1rgb_DATA_DIR
         elif self.args['exp_type'] == 'ur_1rgb':
@@ -242,13 +250,19 @@ class VLAIL:
             wandb.init(entity=WANDB_ENTITY, project=self.args["wandb_name"], reinit=True,
                        name=f"{self.args['wandb_name']}", dir=self.args['ckpt_dir'], mode='offline')
             wandb.config.update(self.args)
-            # print('use_wandb: True')
-        
+            print('use_wandb: True')
         # if self.args['exp_type'] == 'franka_3rgb':
-        from dataset_load.dataset_multi_robot import load_data
-
-        train_dataloader, val_dataloader, stats = load_data(dataset_dir, self.config['robot_infor'], self.batch_size_train, self.batch_size_val, chunk_size=self.chunk_size, use_depth_image=self.args['use_depth_image'], sample_weights=sample_weights, rank=self.args['rank'], use_data_aug=self.args['use_data_aug'], act_norm_class=self.args['act_norm_class'], use_raw_lang=self.args['use_raw_lang'], name_filter=name_filter, exp_type=self.args['exp_type'], logger=self.logger, tg_mode=self.args['tg_mode'])
-
+        if self.args['use_aug_data']:
+            # print(f"self args use aug data is:{self.args['use_aug_data']}")
+            # print('here 1')
+            aug_robot_data_dir = os.path.join(aug_data_dir, self.args['task_name'])
+            from dataset_load.dataset_multi_robot import load_mixed_data
+            train_dataloader, val_dataloader, stats = load_mixed_data(dataset_dir, aug_robot_data_dir, self.config['robot_infor'], self.batch_size_train, self.batch_size_val, chunk_size=self.chunk_size, args=self.args, use_depth_image=self.args['use_depth_image'], sample_weights=sample_weights, rank=self.args['rank'], use_data_aug=self.args['use_data_aug'], act_norm_class=self.args['act_norm_class'], use_raw_lang=self.args['use_raw_lang'], name_filter=name_filter, exp_type=self.args['exp_type'], logger=self.logger, tg_mode=self.args['tg_mode'])
+        else:
+            # print('here 2')
+            from dataset_load.dataset_multi_robot import load_data
+            train_dataloader, val_dataloader, stats = load_data(dataset_dir, self.config['robot_infor'], self.batch_size_train, self.batch_size_val, chunk_size=self.chunk_size, use_depth_image=self.args['use_depth_image'], sample_weights=sample_weights, rank=self.args['rank'], use_data_aug=self.args['use_data_aug'], act_norm_class=self.args['act_norm_class'], use_raw_lang=self.args['use_raw_lang'], name_filter=name_filter, exp_type=self.args['exp_type'], logger=self.logger, tg_mode=self.args['tg_mode'])
+        
         # save dataset stats
         stats_path = os.path.join(self.args['ckpt_dir'], f'dataset_stats.pkl')
         with open(stats_path, 'wb') as f:
@@ -510,6 +524,8 @@ if __name__ == "__main__":
     parser.add_argument('--camera_names', nargs='+', help='<Required> Set flag', required=True)
     parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
     parser.add_argument('--agent_class', action='store', type=str, help='agent_class, capitalize', required=True)
+
+    #parser.add_argument('--train_dataset_size', action='store', type=int, required=True, help='set train_dataset size')
     
     parser.add_argument('--batch_size_train', action='store', type=int, help='batch_size', required=True)
     parser.add_argument('--batch_size_val', action='store', type=int, help='batch_size', required=True)
@@ -588,5 +604,8 @@ if __name__ == "__main__":
     # mode7: inrocs data: input 16 puppet, output 16 puppet
     # mode8: inrocs data: input 16 master, output 16 puppet
     parser.add_argument('--tg_mode', type=str, default='mode1')
+
+    parser.add_argument('--use_aug_data', type=ast.literal_eval, default=False)
+    parser.add_argument('--aug_num', action='store', type=int, help='aug_dataset size while use aug_data')
 
     main(vars(parser.parse_args()))

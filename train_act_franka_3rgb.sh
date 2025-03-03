@@ -46,10 +46,16 @@ export TORCH_HOME=/media/users/wk/torch_model
 
 ############ for benchmark!
 # --num_steps 100000 --eval_every 100001 --validate_every 500 --save_every 50000 \
+task_name=$1
+ckpt_dir=$2
+mkdir -p "$ckpt_dir"
+use_aug_data=$3
+aug_num=$4
+
 CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
-        --task_name place_in_bread_on_plate_1 \
-        --camera_names camera_left camera_right camera_top \
-        --ckpt_dir ./ckpt_dir/ACT_camlrt/241121/table/place_in_bread_on_plate_1_lr1e5_batch24_chunk50 \
+        --task_name $1 \
+        --camera_names camera_left camera_right \
+        --ckpt_dir $2 \
         --exp_type franka_3rgb \
         --agent_class ACT \
         --batch_size_train 48 --batch_size_val 48 \
@@ -61,3 +67,5 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
         --wandb_name ACT_camlrt_place_in_bread_on_plate_1_lr1e5_batch24_chunk50 \
+        --use_aug_data $3 \
+        --aug_num $4 \

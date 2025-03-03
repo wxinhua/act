@@ -10,7 +10,7 @@ agent_class: ACT
 robot_infor:
     # camera_sensors: ['rgb_images','depth_images']
     camera_sensors: ['rgb_images']
-    camera_names : ['camera_left', 'camera_right', 'camera_top']
+    camera_names : ['camera_left', 'camera_right']
 
     arms : ['puppet']
     controls : ['joint_position', 'end_effector']

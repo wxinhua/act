@@ -145,7 +145,8 @@ if __name__ == '__main__':
     read_h5files = ReadH5Files(robot_infor)
     # file_path = '/alex.zhao/dataset/franka/data/open_drawer_h5/open_drawer/success_episodes/0912_155150/data/trajectory.hdf5'
     # file_path = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/real_franka/h5_data/241012_upright_blue_cup_1/success_episodes/1012_203904/data/trajectory.hdf5'
-    file_path = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/real_franka/h5_data/241012_upright_blue_cup_1/success_episodes/1012_203629/data/trajectory.hdf5'
+    # file_path = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/real_franka/h5_data/241012_upright_blue_cup_1/success_episodes/1012_203629/data/trajectory.hdf5'
+    file_path = '/media/data/benchmark1_0/h5_peter_tiangong_1rgb/desktop_throw_battery/success_episodes/train/2024-12-04-10-55-31/data/data.h5'
     start_ts = 0
     image_dict, control_dict, base_dict, is_sim, is_compress = read_h5files.execute(file_path, camera_frame=start_ts)
 
