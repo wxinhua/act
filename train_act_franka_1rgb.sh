@@ -57,7 +57,7 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --ckpt_dir /media/wk/IL_research/test \
         --exp_type franka_1rgb \
         --agent_class ACT \
-        --batch_size_train 48 --batch_size_val 48 \
+        --batch_size_train 24 --batch_size_val 24 \
         --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
         --lr 1e-4 --kl_weight 10 \
         --backbone 'resnet18' \

@@ -9,8 +9,8 @@
 # export TORCH_HOME=/nfsroot/DATA/IL_Research/wk/torch_model
 
 #### baidu
-export HF_HOME=/media/users/wk/huggingface_model
-export TORCH_HOME=/media/users/wk/torch_model
+# export HF_HOME=/media/users/wk/huggingface_model
+# export TORCH_HOME=/media/users/wk/torch_model
 
 # CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
 #         --task_name multi_task_2 \
@@ -46,19 +46,21 @@ export TORCH_HOME=/media/users/wk/torch_model
 
 ############ for benchmark!
 # --num_steps 100000 --eval_every 100001 --validate_every 500 --save_every 50000 \
-task_name=$1
-ckpt_dir=$2
-mkdir -p "$ckpt_dir"
-use_aug_data=$3
-aug_num=$4
+# task_name=$1
+# ckpt_dir=$2
+# mkdir -p "$ckpt_dir"
+# use_aug_data=$3
+# aug_num=$4
+
+
 
 CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
-        --task_name $1 \
-        --camera_names camera_left camera_right \
-        --ckpt_dir $2 \
-        --exp_type franka_3rgb \
+        --task_name ur_put_steamed_bun_on_the_steamer_100 \
+        --camera_names camera_left\
+        --ckpt_dir /media/wxh/de27d578-5aeb-4158-9716-f0ec70911dbb/act_ckpt \
+        --exp_type ur_std_station_1 \
         --agent_class ACT \
-        --batch_size_train 48 --batch_size_val 48 \
+        --batch_size_train 24 --batch_size_val 24 \
         --chunk_size 50 --hidden_dim 512 --dim_feedforward 3200 \
         --lr 1e-4 --kl_weight 10 \
         --backbone 'resnet18' \
@@ -66,6 +68,6 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --lr_scheduler CosineLR \
         --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
         --use_wandb \
-        --wandb_name ACT_camlrt_place_in_bread_on_plate_1_lr1e5_batch24_chunk50 \
-        --use_aug_data $3 \
-        --aug_num $4 \
+        --wandb_name ACT_ur_put_steamed_bun_on_the_steamer_100_lr1e4_batch24_chunk50 \
+        --use_aug_data False \
+        --aug_num 0 \

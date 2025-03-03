@@ -49,6 +49,10 @@ class EpisodicDataset(torch.utils.data.Dataset):
             self.qpos_arm_key = 'puppet'
             self.action_arm_key = 'puppet'
             self.ctl_elem_key = 'joint_position'
+        elif exp_type in ['ur_std_station_1']:
+            self.qpos_arm_key = 'puppet'
+            self.action_arm_key = 'puppet'
+            self.ctl_elem_key = ['joint_position','hand_joint_position']
         elif exp_type in ['songling_3rgb']:
             self.qpos_arm_key = 'puppet'
             self.action_arm_key = 'master'
@@ -232,9 +236,9 @@ class EpisodicDataset(torch.utils.data.Dataset):
         all_cam_images = []
         all_cam_depths = []
 
-        # tmp_dir = '/media/wk/4852d46a-6164-41f4-bd60-f88410dc2041/wk_dir/datasets/benchmark_data_1/difffusion_input_img'
-        # img_dir = os.path.join(tmp_dir, f"{self.exp_type}")
-        # os.makedirs(img_dir, exist_ok=True)
+        tmp_dir = '/home/wxh/project/act/check_img'
+        img_dir = os.path.join(tmp_dir, f"{self.exp_type}")
+        os.makedirs(img_dir, exist_ok=True)
 
         for cam_name in self.robot_infor['camera_names']:
             # print(f"cam_name: {cam_name}")
@@ -250,10 +254,10 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 cur_img = cur_img[:, :, ::-1]
 
             ## only for check RGB channel order
-            # if self.tmp_cnt < 10:
-            #     img = Image.fromarray((cur_img).astype(np.uint8))
-            #     img.save(os.path.join(img_dir, str(self.tmp_cnt)+'_rgb.png'))
-            # self.tmp_cnt += 1
+            if self.tmp_cnt < 10:
+                img = Image.fromarray((cur_img).astype(np.uint8))
+                img.save(os.path.join(img_dir, str(self.tmp_cnt)+'_rgb.png'))
+            self.tmp_cnt += 1
 
             all_cam_images.append(cur_img) # rgb
 
@@ -413,6 +417,10 @@ def get_norm_stats(train_dataset_path_list, val_dataset_path_list, robot_infor, 
         qpos_arm_key = 'puppet'
         action_arm_key = 'puppet'
         ctl_elem_key = 'joint_position'
+    elif exp_type in ['ur_std_station_1']:
+        qpos_arm_key = 'puppet'
+        action_arm_key = 'puppet'
+        ctl_elem_key = ['joint_position','hand_joint_position']
     elif exp_type in ['songling_3rgb']:
         qpos_arm_key = 'puppet'
         action_arm_key = 'master'

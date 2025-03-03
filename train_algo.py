@@ -25,8 +25,8 @@ import logging
 torchvision.disable_beta_transforms_warning()
 
 os.environ['DEVICE'] = "cuda"
-WANDB_ENTITY = 'zedwk' #None
-WANDB_API_KEY = 'd8b6ecb1e0ea3f72b9d017d7868809be770b283e' #None
+WANDB_ENTITY = 'will' #None
+WANDB_API_KEY = '0c1535e23a9f258e9c77b361a42aa03a073f7042' #None
 # os.environ["WANDB_DISABLED"] = "true"
 os.environ["WANDB_API_KEY"] = WANDB_API_KEY
 
@@ -225,14 +225,14 @@ class VLAIL:
         #Tiangong_1rgb_DATA_DIR = '/media/data/h5_tiangong_1rgb'
         Tiangong_1rgb_DATA_DIR = '/media/data/benchmark1_0/h5_peter_tiangong_1rgb'
 
-        UR_1rgb_DATA_DIR = '/media/data/h5_ur_1rgb'
+        UR_1rgb_DATA_DIR = '/media/wxh/de27d578-5aeb-4158-9716-f0ec70911dbb/ur_std_station_1'
 
         if self.args['exp_type'] == 'franka_3rgb':
             robot_data_dir = Franka_3rgb_DATA_DIR
             aug_data_dir = Aug_Franka_3rgb_DATA_DIR
         elif self.args['exp_type'] == 'franka_1rgb':
             robot_data_dir = Franka_1rgb_DATA_DIR
-        elif self.args['exp_type'] == 'ur_1rgb':
+        elif self.args['exp_type'] == 'ur_std_station_1':
             robot_data_dir = UR_1rgb_DATA_DIR
         elif self.args['exp_type'] == 'songling_3rgb':
             robot_data_dir = Songling_3rgb_DATA_DIR
