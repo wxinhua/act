@@ -250,7 +250,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 cur_img = cv2.resize(cur_img, dsize=self.new_size)
                 # 2 cur_img size: (480, 640, 3)
                 # print(f'2 cur_img size: {cur_img.shape}')
-            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb']:
+            if self.exp_type in ['franka_3rgb', 'franka_1rgb', 'ur_1rgb', 'simulation_4rgb','ur_std_station_1']:
                 cur_img = cur_img[:, :, ::-1]
 
             ## only for check RGB channel order
