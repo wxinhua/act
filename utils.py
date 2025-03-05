@@ -9,6 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
@@ -41,7 +43,9 @@ def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
     # save training curves
     for key in train_history[0]:
         plot_path = os.path.join(ckpt_dir, f'train_val_{key}_seed_{seed}.png')
+        print('1')
         plt.figure()
+        print('2')
         train_values = [summary[key].item() for summary in train_history]
         val_values = [summary[key].item() for summary in validation_history]
         plt.plot(np.linspace(0, num_epochs-1, len(train_history)), train_values, label='train')

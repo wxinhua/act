@@ -436,6 +436,10 @@ class VLAIL:
                             "scheduler": scheduler.state_dict(),
                             "loss":loss}
                     torch.save(curr_ckpt_info, ckpt_path)
+                    print(f"train_history: {len(train_history)}")
+                    print(f"validation_history: {len(validation_history)}")
+                    print(f"step: {self.args['num_steps']}")
+                    print(f"ckpt_path: {ckpt_dir}")                                                                            
                     plot_history(train_history, validation_history, self.args['num_steps'], ckpt_dir, self.seed)
         
         if rank == 0:

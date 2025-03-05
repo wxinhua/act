@@ -66,7 +66,7 @@ CUDA_VISIBLE_DEVICES=0 python3 train_algo.py \
         --backbone 'resnet18' \
         --act_norm_class norm2 \
         --lr_scheduler CosineLR \
-        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 25000 \
+        --num_steps 50000 --eval_every 50001 --validate_every 250 --save_every 10000 \
         --use_wandb \
         --wandb_name ACT_ur_put_steamed_bun_on_the_steamer_100_lr1e4_batch24_chunk50 \
         --use_aug_data False \
